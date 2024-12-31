@@ -7,7 +7,6 @@ from data_analysisv2 import Processor
 from data_vizualisation import Viz
 from eq5d_profile1 import eq5dvalue
 
-
 print('RUNNING')
 
 raw_data = pd.read_csv('fake_data.csv')
@@ -30,10 +29,6 @@ for group_name, group_data in siloed_data.items():
     print(group_name + ' group')
     print(simple)
     print(binary)
-
-#Im just testing if this worksS
-
-#testing line 2
 
 #print a time series plot of binary data
 ts_delta_binary = Processor(data,group_col).ts_binary()
