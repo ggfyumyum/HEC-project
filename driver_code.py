@@ -31,9 +31,9 @@ for group_name, group_data in siloed_data.items():
     print(simple)
     print(binary)
 
+#Im just testing if this worksS
 
-
-
+#testing line 2
 
 #print a time series plot of binary data
 ts_delta_binary = Processor(data,group_col).ts_binary()
