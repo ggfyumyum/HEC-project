@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class Viz:
+    #can create general purpose methods (static) and normal methods)
     def __init__(self,data):
             self.data = data
         
@@ -12,6 +13,7 @@ class Viz:
           res = sns.lineplot(data=df)
           plt.show()
           return
+    
     
 
 

@@ -39,6 +39,4 @@ class Processor:
         binary_profile['% problems'] = (binary_profile['Problems'] / (binary_profile['No problems']+ binary_profile['Problems'])).mul(100).round(1)
             
         return binary_profile
-    
-
-
+ 

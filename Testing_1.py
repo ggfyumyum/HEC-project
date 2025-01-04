@@ -1,8 +1,7 @@
-import pandas as pd
+d1 = {}
 
-print('test')
+d1['test'] = [1,2,3]
 
-k = pd.DataFrame([0,1])
+x = 'test'
 
-
-print(k, 'this is my biznatch')
+print(d1[x])

@@ -68,7 +68,84 @@ class Processor:
         df2 = pd.DataFrame(num_res).T
 
         return df2
+       
+    def paretian(self,group1,group2):
+        #input name of group1 data, name of group2 data
+        #outputs a trimmed df showing the paretian classification of group1 vs group2 index profile.
+
+        if len(self.siloed_data)!=2:
+            print("TO run paretian analysis requires g  = 2")
+            return
+
+        df1 = self.siloed_data[group1]
+        df2 = self.siloed_data[group2]
+
+        df = pd.merge(df1,df2,on=['UID'])
+
+        df[group1] = df['INDEXPROFILE_x']
+        df[group2] = df['INDEXPROFILE_y']
+
+        df = df[['UID','Preop','Postop']]
+        df.set_index(['UID'],inplace=True)
+
+        def check_paretian(row,group1,group2):
+
+            baseline = list(str(row[group1]))
+            follow = list(str(row[group2]))
+
+            delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, follow)]
+
+            if all (d==0 for d in delta):
+                return "Samee"
+            
+            elif all (d>0 for d in delta):
+                return "Worse"
+            
+            elif all (d<0 for d in delta):
+                return "Better"
+            
+            return "Mixed/uncategorised"
+
+        df['Paretian class'] = df.apply(check_paretian,axis=1,group1=group1,group2=group2)
+
+        return df
     
+    def frequency (self):
+        #input whole dataframe
+        #output top 10 frequency indexprofiles
+        x = pd.Series(self.df['INDEXPROFILE'])
+        print(x)
+        x = x.value_counts
+
+        return x
+
+
+
+    
+        
+
+
+    #todo 
+
+    #cumulative frequency
+    #paretian classification - DONE
+    #health profile grid
+    #level sum score
+    #level frequency score
+
+    #EQ VAS
+    #simple descriptive statistics
+
+
+    #extra
+    #shannons indices
+    #health state density curve
+    #EQVAS - regression analysis
+    #group by demographic
+
+    #heteroskedacitiy
+    #regression analysis
+
 
 
 

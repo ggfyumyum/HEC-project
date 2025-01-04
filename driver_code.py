@@ -20,6 +20,15 @@ data = Validator(raw_data).data
 group_col = 'TIME_INTERVAL'
 siloed_data = Processor(data,group_col).siloed_data
 
+x = Processor(data,group_col)
+
+#run paretian analysis
+paretian = Processor(data,group_col).paretian('Preop','Postop')
+print(paretian)
+
+print(Processor(data,group_col).frequency())
+
+'''
 #print a simple descripton for each group and a binary format description
 #todo cumulative analysis
 for group_name, group_data in siloed_data.items():
@@ -33,10 +42,11 @@ for group_name, group_data in siloed_data.items():
 #print a time series plot of binary data
 ts_delta_binary = Processor(data,group_col).ts_binary()
 Viz(ts_delta_binary).ts()
+'''
 
 #calcukate utility value for an NZ sample
 result = eq5dvalue(data, dec,'NewZealand').calculate_util()
-#print(result)
+print(result)
 
 
 
