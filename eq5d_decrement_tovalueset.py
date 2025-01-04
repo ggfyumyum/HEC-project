@@ -4,7 +4,6 @@ import itertools
 df = pd.read_excel('VS_decrements.xlsx')
 
 #generates value set from decrement table
-
 df.fillna(0, inplace=True)
 
 #disregard start value, intercept
@@ -15,12 +14,10 @@ df.set_index('LABEL',inplace=True)
 
 dimension_list=['MO','SC','UA','PD','AD']
 
-
 res = {}
 
 for country in df.columns:
     country_res = {}
-
     for num in num_list:
         print('starting the loop', 'country=',country)
         
@@ -33,6 +30,6 @@ for country in df.columns:
         country_res[num] = start_value
     res[country] = country_res
 res = pd.DataFrame(res)
-
+res['INDEX'] = pd.Series(num_list)
+res.set_index('INDEX',inplace=True)
 res.to_csv('valueset_data.csv', index=False)
-    #res[country] = k

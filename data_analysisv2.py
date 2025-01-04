@@ -110,24 +110,17 @@ class Processor:
 
         return df
     
-    def frequency (self):
+    def top_frequency (self):
         #input whole dataframe
         #output top 10 frequency indexprofiles
         x = pd.Series(self.df['INDEXPROFILE'])
-        print(x)
-        x = x.value_counts
-
-        return x
-
-
-
-    
-        
+        top_10_index = x.value_counts().head(10)
+        return top_10_index
 
 
     #todo 
 
-    #cumulative frequency
+    #cumulative frequency - DONE
     #paretian classification - DONE
     #health profile grid
     #level sum score
