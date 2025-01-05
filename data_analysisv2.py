@@ -117,11 +117,14 @@ class Processor:
         top_10_index = x.value_counts().head(10)
         return top_10_index
     
-    def hpg(self, paretian_df, util_ranking,group1='Preop',group2='Postop'):
+    def hpg(self, paretian_df,util_ranking,group1='Preop',group2='Postop'):
         #This function requires a special input, paretian classification input and util ranking
         #outputs a health profile grid
-        print(paretian_df.head())
-
+        
+        paretian_df['preop_ranking'] = paretian_df[group1].map(util_ranking)
+        paretian_df['postop_ranking'] = paretian_df[group2].map(util_ranking)
+        print(paretian_df)
+        paretian_df.to_csv('xyz.csv')
         #merged = pd.merge(paretian_df,util_ranking,left_on='UID',right_on='INDEX',how='left')
         return
 

@@ -1,6 +1,6 @@
 import pandas as pd
 class eq5dvalue:
-#This class will deal with eq5d values.
+#This class will have some methods which deal with calculating utility
 #THe input will be some data containing eq5d profiles, the country label, and the value set
 #the output will be a df, which contains the util values mapped to the original UIDs.
 
