@@ -23,9 +23,6 @@ else:
 #run the data through the validator
 data = Validator(raw_data).data
 
-x = eq5dvalue(data,value_set)
-print(x.calculate_util())
-
 #create a dictionary with each group having its own dataframe
 #you need to specify which column the group label is
 group_col = 'TIME_INTERVAL'
@@ -34,7 +31,10 @@ siloed_data = Processor(data,group_col).siloed_data
 paretian = Processor(data,group_col).paretian('Preop','Postop')
 t10_index = Processor(data,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_col).ts_binary()
-#util_test_nz = eq5dvalue(data, dec,'NewZealand').calculate_util()
+data_with_util = eq5dvalue(data, value_set,'NewZealand').calculate_util()
+util_ranking = eq5dvalue(data, value_set,'NewZealand').create_util_ranking()
+
+x = Processor(data,group_col).hpg(paretian,util_ranking)
 
 #print a simple descripton for each group and a binary format description
 def show_desc(data):
@@ -54,7 +54,7 @@ def show_desc(data):
 #print(t10_index)
 #print(ts_delta_binary)
 #print(util_test_nz)
-print(t10_index)
+#print(t10_index)
 
 
 print('done')

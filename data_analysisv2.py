@@ -116,6 +116,14 @@ class Processor:
         x = pd.Series(self.df['INDEXPROFILE'])
         top_10_index = x.value_counts().head(10)
         return top_10_index
+    
+    def hpg(self, paretian_df, util_ranking,group1='Preop',group2='Postop'):
+        #This function requires a special input, paretian classification input and util ranking
+        #outputs a health profile grid
+        print(paretian_df.head())
+
+        #merged = pd.merge(paretian_df,util_ranking,left_on='UID',right_on='INDEX',how='left')
+        return
 
 
     #todo 
