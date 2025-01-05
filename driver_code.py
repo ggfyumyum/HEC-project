@@ -33,8 +33,9 @@ t10_index = Processor(data,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_col).ts_binary()
 data_with_util = eq5dvalue(data, value_set,'NewZealand').calculate_util()
 util_ranking = eq5dvalue(data, value_set,'NewZealand').create_util_ranking()
+hpg_data = Processor(data,group_col).hpg(paretian,util_ranking)
 
-x = Processor(data,group_col).hpg(paretian,util_ranking)
+Viz(hpg_data).hpg()
 
 #print a simple descripton for each group and a binary format description
 def show_desc(data):

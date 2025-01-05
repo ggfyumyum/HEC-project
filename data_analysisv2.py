@@ -96,7 +96,7 @@ class Processor:
             delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, follow)]
 
             if all (d==0 for d in delta):
-                return "Samee"
+                return "Same"
             
             elif all (d>0 for d in delta):
                 return "Worse"
@@ -119,14 +119,12 @@ class Processor:
     
     def hpg(self, paretian_df,util_ranking,group1='Preop',group2='Postop'):
         #This function requires a special input, paretian classification input and util ranking
-        #outputs a health profile grid
+        #outputs a df which can be used to create a health profile grid
         
         paretian_df['preop_ranking'] = paretian_df[group1].map(util_ranking)
         paretian_df['postop_ranking'] = paretian_df[group2].map(util_ranking)
-        print(paretian_df)
         paretian_df.to_csv('xyz.csv')
-        #merged = pd.merge(paretian_df,util_ranking,left_on='UID',right_on='INDEX',how='left')
-        return
+        return paretian_df
 
 
     #todo 

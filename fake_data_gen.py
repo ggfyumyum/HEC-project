@@ -8,7 +8,7 @@ print('running data generator')
 #group count = the number of time intervals measured.
 #num is the people per group, NOT the total num.
 
-num = 5000
+num = 1000
 time_intervals = 2
 
 #generate up to N intervals
