@@ -23,19 +23,31 @@ else:
 #run the data through the validator
 data = Validator(raw_data).data
 
+print('data before',data)
+
+#append the utility scores and calculation to the original data
+data = eq5dvalue(data, value_set,'NewZealand').calculate_util()
+print('the data after',data)
+
+data.to_csv('data_output.csv')
+
 #create a dictionary with each group having its own dataframe
 #you need to specify which column the group label is
 group_col = 'TIME_INTERVAL'
+group1 = 'Preop'
+group2 = 'Postop'
 siloed_data = Processor(data,group_col).siloed_data
 
-paretian = Processor(data,group_col).paretian('Preop','Postop')
+
+paretian = Processor(data,group_col).paretian(group1,group2)
 t10_index = Processor(data,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_col).ts_binary()
-data_with_util = eq5dvalue(data, value_set,'NewZealand').calculate_util()
-util_ranking = eq5dvalue(data, value_set,'NewZealand').create_util_ranking()
-hpg_data = Processor(data,group_col).hpg(paretian,util_ranking)
+
+print(paretian)
+hpg_data = Processor(data,group_col).hpg(paretian,group1,group2)
 
 Viz(hpg_data).hpg()
+
 
 #print a simple descripton for each group and a binary format description
 def show_desc(data):

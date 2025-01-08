@@ -8,8 +8,8 @@ print('running data generator')
 #group count = the number of time intervals measured.
 #num is the people per group, NOT the total num.
 
-num = 1000
-time_intervals = 3
+num = 100
+time_intervals = 2
 
 #generate up to N intervals
 intervals = []
@@ -17,7 +17,8 @@ for time in range(time_intervals):
     intervals.append('interval'+str(time))
 
 #pre-labelled intervals for N = 3
-intervals = ['Preop','Postop','Future']
+l = ['Preop','Postop','Future']
+intervals = l[:time_intervals]
 
 gender_assignment = ['M','F']
 

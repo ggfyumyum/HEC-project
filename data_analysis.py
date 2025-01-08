@@ -117,21 +117,32 @@ class Processor:
         top_10_index = x.value_counts().head(10)
         return top_10_index
     
-    def hpg(self, paretian_df,util_ranking,group1='Preop',group2='Postop'):
+    def hpg(self, paretian_df,group1='Preop',group2='Postop'):
         #This function requires a special input, paretian classification input and util ranking
         #outputs a df which can be used to create a health profile grid
+
+        df = self.df
+
+        df_1 = df[df[self.group_col]==group1]
+        df_2 = df[df[self.group_col]==group2]
         
-        paretian_df['preop_ranking'] = paretian_df[group1].map(util_ranking)
-        paretian_df['postop_ranking'] = paretian_df[group2].map(util_ranking)
+        paretian_df['preop_ranking'] = paretian_df.index.map(df_1.set_index('UID')['RANKED_UTILITY'])
+        paretian_df['postop_ranking'] = paretian_df.index.map(df_2.set_index('UID')['RANKED_UTILITY'])
+
         paretian_df.to_csv('xyz.csv')
+        
         return paretian_df
+    
+    def level_sum_score(self):
+
+        return
 
 
     #todo 
 
     #cumulative frequency - DONE
     #paretian classification - DONE
-    #health profile grid
+    #health profile grid - DONE
     #level sum score
     #level frequency score
 
