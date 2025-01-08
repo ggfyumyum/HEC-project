@@ -131,9 +131,10 @@ class Processor:
 
     #cumulative frequency - DONE
     #paretian classification - DONE
-    #health profile grid
+    #health profile grid - DONE
     #level sum score
     #level frequency score
+    #simple summary plot of each score by dimension %
 
     #EQ VAS
     #simple descriptive statistics
