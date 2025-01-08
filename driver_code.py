@@ -4,9 +4,9 @@ import numpy as np
 import seaborn as sns
 
 from data_validation import Validator
-from data_analysisv2 import Processor
+from data_analysis import Processor
 from data_vizualisation import Viz
-from eq5d_profile1 import eq5dvalue
+from eq5d_profile import eq5dvalue
 from eq5d_decrement_processing import decrement_processing
 
 print('RUNNING')
