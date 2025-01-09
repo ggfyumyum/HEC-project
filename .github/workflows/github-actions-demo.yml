@@ -28,6 +28,7 @@ jobs:
         SHINYAPPS_ACCOUNT: ${{ secrets.SHINYAPPS_ACCOUNT }}
         SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
         SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
+        
       run: |
         pip install rsconnect-python
         rsconnect deploy shiny --account ${{ secrets.SHINYAPPS_ACCOUNT }} --token ${{ secrets.SHINYAPPS_TOKEN }} --secret ${{ secrets.SHINYAPPS_SECRET }} --appDir .
