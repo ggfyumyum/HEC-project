@@ -27,7 +27,7 @@ print('data before',data)
 data = eq5dvalue(data, value_set,'NewZealand')
 data = data.calculate_util()
 print('the data after',data)
-#data.to_csv('data_output.csv')
+
 
 #create a dictionary with each group having its own dataframe, specify which column the group label is
 group_col = 'TIME_INTERVAL'
@@ -38,10 +38,9 @@ t10_index = Processor(data,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_col).ts_binary()
 paretian = Processor(data,group_col).paretian(group1,group2)
 
-data = Processor(data,group_col).level_sum_score()
-print(data)
+data = Processor(data,group_col).level_frequency_score()
+data.to_csv('data_output.csv')
 
-Viz(data).lss_utility()
 #Viz(Processor(data,group_col).hpg(paretian,group1,group2)).hpg()
 
 

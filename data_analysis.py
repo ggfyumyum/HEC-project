@@ -137,8 +137,26 @@ class Processor:
         dimensions = ['MO','SC','UA','PD','AD']
         self.df['level_sum_score'] = self.df[dimensions].sum(axis=1)
         return self.df
+    
+    def level_frequency_score(self):
+        dimensions= ['MO','SC','UA','PD','AD']
+
+        def calculate_freq(row):
+
+            count = [0]*5
+            for dim in dimensions:
+                value = row[dim]
+                if 0<value<6:
+                    count[value-1]+=1
+            freq = ''.join(str(d) for d in count)
+
+            #keep freq as str to preserve leading zeros
+            return (freq)
+        self.df['level_frequency_score'] = self.df.apply(calculate_freq, axis=1)
+        return self.df
         
 
+        
         return
 
 
