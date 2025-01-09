@@ -29,4 +29,25 @@ class Viz:
           plt.grid()
           plt.show()
           return
-      
+    
+    def histogram(self):
+          #produce histogram of each dimension
+          
+          df = self.data
+          print('df before',df)
+          df = df.melt(var_name='Level',value_name='Percentage',ignore_index=False).reset_index()
+          df.rename(columns={'index':'Dimension'},inplace=True)
+
+          print('the df',df)
+
+          plt.figure(figsize=(12,8))
+          sns.barplot(data=df, x='Dimension',y='Percentage',hue='Level',palette='viridis')
+          plt.xlabel('Dimension')
+          plt.ylabel('Percentage')
+          plt.title('Percentage of Each Level by Dimension')
+          plt.legend(title='Level')
+          plt.grid(axis='y')
+
+          plt.yticks(range(0,51,5))
+          plt.show()
+          return

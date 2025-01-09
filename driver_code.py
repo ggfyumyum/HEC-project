@@ -56,7 +56,10 @@ def show_desc(data):
         print(binary)
     return
 
-#show_desc(siloed_data)
+show_desc(siloed_data)
+
+res = Processor(data).get_percent()
+Viz(res).histogram()
 #Viz(ts_delta_binary).ts()
 #print(paretian)
 #print(t10_index)

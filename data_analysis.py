@@ -31,6 +31,9 @@ class Processor:
         simple_profile = df.astype(str)+ "(" + as_percent.astype(str) + "%)"
         return simple_profile
     
+    def get_percent(self):
+        return self.sum_df.div(self.sum_df.sum(axis=0),axis=1).mul(100).round(1)
+    
     def binary_desc(self):
         #Create a table which groups problem (1) vs none (2-5), for a single group (e.g. pre-op)
         df = self.sum_df
@@ -156,7 +159,7 @@ class Processor:
         return self.df
         
 
-        
+
         return
 
 
@@ -165,8 +168,8 @@ class Processor:
     #cumulative frequency - DONE
     #paretian classification - DONE
     #health profile grid - DONE
-    #level sum score
-    #level frequency score
+    #level sum score - DONE
+    #level frequency score - DONE
 
     #EQ VAS
     #simple descriptive statistics
