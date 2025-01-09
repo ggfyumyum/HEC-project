@@ -60,6 +60,15 @@ show_desc(siloed_data)
 
 res = Processor(data).get_percent()
 Viz(res).histogram()
+
+#create a hashmap with percentages instead of full datasets to be used in grouped histogram
+grouped_pct = {}
+for key, item in siloed_data.items():
+    grouped_pct[key] = Processor(item).get_percent()
+
+Viz(grouped_pct).histogram_by_group()
+
+
 #Viz(ts_delta_binary).ts()
 #print(paretian)
 #print(t10_index)

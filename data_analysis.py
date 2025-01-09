@@ -172,7 +172,11 @@ class Processor:
     #level frequency score - DONE
 
     #EQ VAS
-    #simple descriptive statistics
+    #simple descriptive statistics - DONE
+    #data validation
+    #country select validation
+    #error handling
+    #missing imputation
 
 
     #extra
