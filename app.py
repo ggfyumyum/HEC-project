@@ -4,7 +4,7 @@ ui.input_slider("val", "Slider label", min=0, max=100, value=50)
 
 @render.text
 def slider_val():
-    return f"Slider valuesssss: {input.val()}"
+    return f"Slider valsss: {input.val()}"
 
 
 print('just testing!')
