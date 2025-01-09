@@ -23,12 +23,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Print environment variables
-      run: |
-        echo "SHINYAPPS_ACCOUNT=${{ secrets.SHINYAPPS_ACCOUNT }}"
-        echo "SHINYAPPS_TOKEN=${{ secrets.SHINYAPPS_TOKEN }}"
-        echo "SHINYAPPS_SECRET=${{ secrets.SHINYAPPS_SECRET }}"
-
     - name: Deploy to shinyapps.io
       env:
         SHINYAPPS_ACCOUNT: ${{ secrets.SHINYAPPS_ACCOUNT }}
