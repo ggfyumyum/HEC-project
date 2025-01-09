@@ -29,5 +29,5 @@ jobs:
         SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
         SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
       run: |
-        library(rsconnect)
+        pip install rsconnect-python
         rsconnect::deployApp(appName = "app", account = Sys.getenv("ggfyum2"))
