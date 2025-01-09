@@ -31,4 +31,5 @@ jobs:
 
       run: |
         pip install rsconnect-python
-        rsconnect deploy shiny --account ${{ secrets.SHINYAPPS_ACCOUNT }} --token ${{ secrets.SHINYAPPS_TOKEN }} --secret ${{ secrets.SHINYAPPS_SECRET }} --app-id app
+        rsconnect add --account ${{ secrets.SHINYAPPS_ACCOUNT }} --name app --token ${{ secrets.SHINYAPPS_TOKEN }} --secret ${{ secrets.SHINYAPPS_SECRET }}
+        rsconnect deploy shiny /HEC-PROJECT --name app --title my-app
