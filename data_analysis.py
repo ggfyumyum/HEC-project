@@ -134,6 +134,9 @@ class Processor:
         return paretian_df
     
     def level_sum_score(self):
+        dimensions = ['MO','SC','UA','PD','AD']
+        self.df['level_sum_score'] = self.df[dimensions].sum(axis=1)
+        return self.df
         
 
         return

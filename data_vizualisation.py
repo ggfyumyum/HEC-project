@@ -29,9 +29,4 @@ class Viz:
           plt.grid()
           plt.show()
           return
-          
-
-
-    
-
-          
+      

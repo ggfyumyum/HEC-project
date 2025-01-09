@@ -24,9 +24,10 @@ else:
 data = Validator(raw_data).data
 print('data before',data)
 #append the utility scores and calculation to the original data
-data = eq5dvalue(data, value_set,'NewZealand').calculate_util()
+data = eq5dvalue(data, value_set,'NewZealand')
+data = data.calculate_util()
 print('the data after',data)
-data.to_csv('data_output.csv')
+#data.to_csv('data_output.csv')
 
 #create a dictionary with each group having its own dataframe, specify which column the group label is
 group_col = 'TIME_INTERVAL'
@@ -37,7 +38,12 @@ t10_index = Processor(data,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_col).ts_binary()
 paretian = Processor(data,group_col).paretian(group1,group2)
 
-Viz(Processor(data,group_col).hpg(paretian,group1,group2)).hpg()
+data = Processor(data,group_col).level_sum_score()
+print(data)
+
+Viz(data).lss_utility()
+#Viz(Processor(data,group_col).hpg(paretian,group1,group2)).hpg()
+
 
 #print a simple descripton for each group and a binary format description
 def show_desc(data):
@@ -51,11 +57,11 @@ def show_desc(data):
         print(binary)
     return
 
-show_desc(siloed_data)
-Viz(ts_delta_binary).ts()
-print(paretian)
-print(t10_index)
-print(ts_delta_binary)
-print(t10_index)
+#show_desc(siloed_data)
+#Viz(ts_delta_binary).ts()
+#print(paretian)
+#print(t10_index)
+#print(ts_delta_binary)
+#print(t10_index)
 
 print('done')
