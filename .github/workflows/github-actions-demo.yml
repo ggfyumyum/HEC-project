@@ -31,5 +31,5 @@ jobs:
 
       run: |
         pip install rsconnect-python
-        rsconnect add --account ${{ secrets.SHINYAPPS_ACCOUNT }} --name app --token ${{ secrets.SHINYAPPS_TOKEN }} --secret ${{ secrets.SHINYAPPS_SECRET }}
+        rsconnect add --account ${{ secrets.SHINYAPPS_ACCOUNT }} --token ${{ secrets.SHINYAPPS_TOKEN }} --secret ${{ secrets.SHINYAPPS_SECRET }}
         rsconnect deploy shiny . --name app --title my-app
