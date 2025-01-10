@@ -1,7 +1,7 @@
 import pandas as pd
 import itertools
 
-class decrement_processing:
+class Decrement_processing:
     #This class houses several functions dealing with raw decrement value tables
 
     def __init__(self,data):

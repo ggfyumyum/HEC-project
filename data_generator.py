@@ -9,7 +9,7 @@ print('running data generator')
 #num is the people per group, NOT the total num.
 
 num = 100
-time_intervals = 3
+time_intervals = 2
 
 #generate up to N intervals
 intervals = []

@@ -29,8 +29,6 @@ class Validator:
             return []
         group_col = self.data[self.group_col]
         unique_values = group_col.unique().tolist()
-
-        print('Multiple groups detected',unique_values)
         return unique_values
         
     def check_data(self):

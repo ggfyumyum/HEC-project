@@ -163,11 +163,14 @@ class Processor:
             return (freq)
         self.df['level_frequency_score'] = self.df.apply(calculate_freq, axis=1)
         return self.df
+    
+    def ts_utility(self):
+        df = self.df
+
+        avg_utility_df = df.groupby(self.group_col)['UTILITY'].mean().reset_index()
+        avg_utility_df.columns = [self.group_col,'average_utility_score']
         
-
-
-        return
-
+        return avg_utility_df
 
     #todo 
 
@@ -178,13 +181,12 @@ class Processor:
     #level frequency score - DONE
 
     #Time series utility
-
     #EQ VAS
     #simple descriptive statistics - DONE
     #data validation
     #country select validation
-    #error handling
-    #missing imputation
+    #error handling - DONE
+    #missing imputation - DONE
     #flexible country selection
 
 

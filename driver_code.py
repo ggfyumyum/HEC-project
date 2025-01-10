@@ -5,9 +5,9 @@ import seaborn as sns
 
 from data_validation import Validator
 from data_analysis import Processor
-from data_vizualisation import visualizer
-from eq5d_profile import eq5dvalue
-from eq5d_decrement_processing import decrement_processing
+from data_vizualisation import Visualizer
+from eq5d_profile import Eq5dvalue
+from eq5d_decrement_processing import Decrement_processing
 
 print('RUNNING')
 
@@ -22,8 +22,8 @@ country = 'NewZealand'
 if os.path.exists('valueset_data.csv'):
     value_set = pd.read_csv('valueset_data.csv')
 else:
-    value_set = decrement_processing(decrement_table).generate_value_set()
-    decrement_processing.export_value_set(value_set)
+    value_set = Decrement_processing(decrement_table).generate_value_set()
+    Decrement_processing.export_value_set(value_set)
 
 #run the raw data through the validator
 validated_data = Validator(raw_data,multiple_groups,group_col)
@@ -33,7 +33,7 @@ group_list = validated_data.group_list
 
 print(group_list,'group lsit')
 #append the utility scores and ranked calculations to the original data
-data = eq5dvalue(data, value_set,country).calculate_util()
+data = Eq5dvalue(data, value_set,country).calculate_util()
 
 #create a dictionary with each group having its own dataframe, store it in siloed_data
 siloed_data = Processor(data,group_list,group_col).siloed_data
@@ -45,6 +45,8 @@ t10_index = Processor(data,group_list,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_list,group_col).ts_binary()
 paretian = Processor(data,group_list,group_col).paretian()
 data_LSS = Processor(data,group_list,group_col).level_frequency_score()
+avg_utility = Processor(data,group_list,group_col).ts_utility()
+
 
 #print(paretian)
 #print(t10_index)
@@ -86,3 +88,5 @@ visualizer(ts_delta_binary).time_series()
 
 print('done')
 '''
+
+Visualizer(avg_utility).time_series()
