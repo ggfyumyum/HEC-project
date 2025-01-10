@@ -5,14 +5,20 @@ import seaborn as sns
 
 from data_validation import Validator
 from data_analysis import Processor
-from data_vizualisation import Viz
+from data_vizualisation import visualizer
 from eq5d_profile import eq5dvalue
 from eq5d_decrement_processing import decrement_processing
 
 print('RUNNING')
 
+#Required raw inputs
 raw_data = pd.read_csv('fake_data.csv')
 decrement_table = pd.read_excel('VS_decrements.xlsx')
+multiple_groups = True
+group_col = 'TIME_INTERVAL'
+group1 = 'Preop'
+group2 = 'Postop'
+country = 'NewZealand'
 
 #if there is a valueset available, use it. Otherwise, use the decrement table to generate a fresh one.
 if os.path.exists('valueset_data.csv'):
@@ -23,13 +29,10 @@ else:
 
 #run the raw data through the validator
 data = Validator(raw_data).data
-#append the utility scores and calculation to the original data
-data = eq5dvalue(data, value_set,'NewZealand').calculate_util()
+#append the utility scores and ranked calculations to the original data
+data = eq5dvalue(data, value_set,country).calculate_util()
 
 #create a dictionary with each group having its own dataframe, store it in siloed_data
-group_col = 'TIME_INTERVAL'
-group1 = 'Preop'
-group2 = 'Postop'
 siloed_data = Processor(data,group_col).siloed_data
 
 #******************************************* DATA ANALYSIS *****************************************************
@@ -63,18 +66,18 @@ show_desc(siloed_data)
 
 #histogram of the dimension scores from the whole dataset
 as_pct = Processor(data).get_percent()
-Viz(as_pct).histogram()
+visualizer(as_pct).histogram()
 
 #side-by-side histograms comparing groups
 grouped_pct = {}
 for key, item in siloed_data.items():
     grouped_pct[key] = Processor(item).get_percent()
-Viz(grouped_pct).histogram_by_group()
+visualizer(grouped_pct).histogram_by_group()
 
 #health profile grid, requires the paretian dataframe
-Viz(Processor(data,group_col).hpg(paretian,group1,group2)).hpg()
+visualizer(Processor(data,group_col).hpg(paretian,group1,group2)).hpg()
 
 #time series of the binary score change
-Viz(ts_delta_binary).ts()
+visualizer(ts_delta_binary).time_series()
 
 print('done')

@@ -2,13 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-class Viz:
-    #can create general purpose methods (static) and normal methods)
+class visualizer:
+
     def __init__(self,data):
             self.data = data
         
-    
-    def ts(self):
+    def time_series(self):
           df = self.data
           res = sns.lineplot(data=df)
           plt.show()
@@ -34,11 +33,8 @@ class Viz:
           #produce histogram of each dimension
           
           df = self.data
-          print('df before',df)
           df = df.melt(var_name='Level',value_name='Percentage',ignore_index=False).reset_index()
           df.rename(columns={'index':'Dimension'},inplace=True)
-
-          print('the df',df)
 
           plt.figure(figsize=(12,8))
           sns.barplot(data=df, x='Dimension',y='Percentage',hue='Level',palette='viridis')
@@ -58,14 +54,9 @@ class Viz:
           num_groups = len(group_data_dict)
           fig, axes = plt.subplots(1, num_groups,figsize=(12*num_groups,8), sharey=True)
 
-          print('og data',group_data_dict)
-
-
           for ax, (group_name, group_df) in zip(axes, group_data_dict.items()):
                 df = group_df.melt(var_name='Level', value_name='Percentage',ignore_index=False).reset_index()
                 df.rename(columns={'index':'Dimension'}, inplace = True)
-
-                print('the df being plotted',df)
 
                 sns.barplot(data = df, x='Dimension',y='Percentage', hue='Level', palette='viridis', ax=ax)
                 ax.set_xlabel('Dimension')
@@ -74,7 +65,6 @@ class Viz:
                 ax.legend(title='Level')
                 ax.grid(axis='y')
 
-            
           plt.tight_layout()
           plt.show()
           return
