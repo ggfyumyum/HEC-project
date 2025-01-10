@@ -7,14 +7,17 @@ import seaborn as sns
 
 class Processor:
 
-    def __init__(self, data, group_col='Default', multiple_groups=False):
+    def __init__(self, data, group_list=[],group_col='Default'):
 
         #The processor can accept two types of data, one type is the entire dataset. The other is a dataset containing a single group, for example only pre-op patients. 
         self.df = pd.DataFrame(data)
         self.group_col = group_col
+        self.group_list = group_list
+
 
         #If there are multiple groups detected, split the data into dataframes with one group each
-        if multiple_groups:
+        if len(group_list)>0:
+            print('multiple groups detected')
             self.siloed_data = {group: data for group, data in self.df.groupby(self.group_col)}
         
         else:
@@ -72,29 +75,29 @@ class Processor:
 
         return df2
        
-    def paretian(self,group1,group2):
-        #input name of group1 data, name of group2 data
+    def paretian(self):
         #outputs a trimmed df showing the paretian classification of group1 vs group2 index profile.
+        if len(self.group_list)!=2:
+            raise ValueError('cant create paretian df if group count!=2')
+        
+        group_1 = self.group_list[0]
+        group_2 = self.group_list[1]
 
-        if len(self.siloed_data)!=2:
-            print("TO run paretian analysis requires g  = 2")
-            return
-
-        df1 = self.siloed_data[group1]
-        df2 = self.siloed_data[group2]
+        df1 = self.siloed_data[group_1]
+        df2 = self.siloed_data[group_2]
 
         df = pd.merge(df1,df2,on=['UID'])
 
-        df[group1] = df['INDEXPROFILE_x']
-        df[group2] = df['INDEXPROFILE_y']
+        df[group_1] = df['INDEXPROFILE_x']
+        df[group_2] = df['INDEXPROFILE_y']
 
-        df = df[['UID','Preop','Postop']]
+        df = df[['UID',group_1,group_2]]
         df.set_index(['UID'],inplace=True)
 
-        def check_paretian(row,group1,group2):
+        def check_paretian(row,group_1,group_2):
 
-            baseline = list(str(row[group1]))
-            follow = list(str(row[group2]))
+            baseline = list(str(row[group_1]))
+            follow = list(str(row[group_2]))
 
             delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, follow)]
 
@@ -109,7 +112,7 @@ class Processor:
             
             return "Mixed/uncategorised"
 
-        df['Paretian class'] = df.apply(check_paretian,axis=1,group1=group1,group2=group2)
+        df['Paretian class'] = df.apply(check_paretian,group_1=group_1,group_2=group_2,axis=1)
 
         return df
     
@@ -171,12 +174,15 @@ class Processor:
     #level sum score - DONE
     #level frequency score - DONE
 
+    #Time series utility
+
     #EQ VAS
     #simple descriptive statistics - DONE
     #data validation
     #country select validation
     #error handling
     #missing imputation
+    #flexible country selection
 
 
     #extra
@@ -187,6 +193,7 @@ class Processor:
 
     #heteroskedacitiy
     #regression analysis
+    #reordering function
 
 
 

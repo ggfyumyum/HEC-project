@@ -24,7 +24,6 @@ class decrement_processing:
             country_res = {}
             for num in num_list:
                 print('starting the loop', 'country=',country)
-                
                 start_value = 1
                 ctr = 0
                 while ctr<5:

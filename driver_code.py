@@ -28,20 +28,25 @@ else:
     decrement_processing.export_value_set(value_set)
 
 #run the raw data through the validator
-data = Validator(raw_data).data
+validated_data = Validator(raw_data,multiple_groups,group_col)
+
+data = validated_data.data
+group_list = validated_data.group_list
+
+print(group_list,'group lsit')
 #append the utility scores and ranked calculations to the original data
 data = eq5dvalue(data, value_set,country).calculate_util()
 
 #create a dictionary with each group having its own dataframe, store it in siloed_data
-siloed_data = Processor(data,group_col).siloed_data
+siloed_data = Processor(data,group_list,group_col).siloed_data
 
 #******************************************* DATA ANALYSIS *****************************************************
 
 #create some new DFs which can be used for plotting or printed directly for analysis
-t10_index = Processor(data,group_col).top_frequency()
-ts_delta_binary = Processor(data,group_col).ts_binary()
-paretian = Processor(data,group_col).paretian(group1,group2)
-data_LSS = Processor(data,group_col).level_frequency_score()
+t10_index = Processor(data,group_list,group_col).top_frequency()
+ts_delta_binary = Processor(data,group_list,group_col).ts_binary()
+paretian = Processor(data,group_list,group_col).paretian()
+data_LSS = Processor(data,group_list,group_col).level_frequency_score()
 
 #print(paretian)
 #print(t10_index)
@@ -75,7 +80,7 @@ for key, item in siloed_data.items():
 visualizer(grouped_pct).histogram_by_group()
 
 #health profile grid, requires the paretian dataframe
-visualizer(Processor(data,group_col).hpg(paretian,group1,group2)).hpg()
+visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
 
 #time series of the binary score change
 visualizer(ts_delta_binary).time_series()

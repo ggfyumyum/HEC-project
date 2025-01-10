@@ -3,20 +3,35 @@ import datetime as dt
 
 class Validator:
     
-    def __init__(self, raw_data):
+    def __init__(self, raw_data, multiple_groups,group_col):
 
         #inputs = raw data, name of the column which the groups are in
         self.data = raw_data
+        self.multiple_groups = multiple_groups
+        self.group_col = group_col
         self.validate_data()
-
+        self.group_list = self.check_groups()
+        
     def validate_data(self):
-        #this function always runs, and it checks if the input (raw data) meets the critical requirements. If it doesn't, it raises an error and stops the whole program.
-        required_dimensions = True
-        if pd.DataFrame(self.data).shape[1]<2:
-            required_dimensions = False
+        # stop the program if raw data does not have required dimensions
 
-        if not required_dimensions:
-            raise ValueError('not meeting data requirements')
+        required_columns = ['MO', 'SC', 'UA', 'PD', 'AD']
+        if not all(column in self.data.columns for column in required_columns):
+            raise ValueError('Data missing required dimension columns, required format MO, SC, UA, PD, AD')
+
+        if pd.DataFrame(self.data).shape[1]<2:
+            raise ValueError('Invalid data input')
+
+    def check_groups(self):
+        if not self.multiple_groups:
+            print('Single group specified')
+            return []
+        
+        group_col = self.data[self.group_col]
+        unique_values = group_col.unique().tolist()
+
+        print('Multiple groups detected',unique_values)
+        return unique_values
         
     def clean_data(self):
         pass
