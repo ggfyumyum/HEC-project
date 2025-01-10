@@ -46,7 +46,7 @@ ts_delta_binary = Processor(data,group_list,group_col).ts_binary()
 paretian = Processor(data,group_list,group_col).paretian()
 data_LSS = Processor(data,group_list,group_col).level_frequency_score()
 avg_utility = Processor(data,group_list,group_col).ts_utility()
-
+avg_eqvas = Processor(data,group_list,group_col).ts_eqvas()
 
 #print(paretian)
 #print(t10_index)
@@ -65,7 +65,7 @@ def show_desc(siloed_data):
         print(binary)
     return
 
-show_desc(siloed_data)
+#show_desc(siloed_data)
 
 #*************************** PLOTTING FUNCTIONS **********************************************
 '''
@@ -89,4 +89,11 @@ visualizer(ts_delta_binary).time_series()
 print('done')
 '''
 
-Visualizer(avg_utility).time_series()
+#Visualizer(avg_utility).time_series()
+#Visualizer(avg_eqvas).time_series()
+
+hdsc = (Processor(data,group_list,group_col).health_state_density_curve())
+
+print('original data', hdsc)
+
+Visualizer(hdsc).health_state_density_curve()

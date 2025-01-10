@@ -17,7 +17,6 @@ class Processor:
 
         #If there are multiple groups detected, split the data into dataframes with one group each
         if len(group_list)>0:
-            print('multiple groups detected')
             self.siloed_data = {group: data for group, data in self.df.groupby(self.group_col)}
         
         else:
@@ -167,10 +166,40 @@ class Processor:
     def ts_utility(self):
         df = self.df
 
-        avg_utility_df = df.groupby(self.group_col)['UTILITY'].mean().reset_index()
-        avg_utility_df.columns = [self.group_col,'average_utility_score']
+        avg_utility= df.groupby(self.group_col)['UTILITY'].mean().reset_index()
+        avg_utility.columns = [self.group_col,'average_utility_score']
+
+        return avg_utility
+    
+    def ts_eqvas(self):
+        df = self.df
+        avg_eqvas = df.groupby(self.group_col)['EQVAS'].mean().reset_index()
+        avg_eqvas.columns = [self.group_col,'average_EQVAS_score']
+
+        return avg_eqvas
+    
+    def health_state_density_curve(self):
+        df = self.df
+        groups = self.group_list
+        cumulative_data = []
+
+        for group in groups:
+            group_df = df[df[self.group_col]==group]
+
+            profile_counts = group_df['INDEXPROFILE'].value_counts().reset_index()
+            profile_counts.columns = ['INDEXPROFILE', 'frequency']
+            profile_counts = profile_counts.sort_values(by='frequency', ascending=False).reset_index(drop=True)
+            
+            profile_counts['cumulative_frequency'] = profile_counts['frequency'].cumsum() / profile_counts['frequency'].sum()
+            profile_counts['cumulative_obs'] = (profile_counts.index + 1) / len(profile_counts)
+            group_df = profile_counts
+            group_df['group'] = group
+            cumulative_data.append(group_df[['cumulative_frequency', 'cumulative_obs', 'group']])
         
-        return avg_utility_df
+        cumulative_df = pd.concat(cumulative_data)
+
+        return cumulative_df
+
 
     #todo 
 
@@ -180,15 +209,14 @@ class Processor:
     #level sum score - DONE
     #level frequency score - DONE
 
-    #Time series utility
-    #EQ VAS
+    #Time series utility - DONE
+    #EQ VAS time series - DONE
     #simple descriptive statistics - DONE
-    #data validation
+    #data validation - DONE
     #country select validation
+    #flexible country selection
     #error handling - DONE
     #missing imputation - DONE
-    #flexible country selection
-
 
     #extra
     #shannons indices

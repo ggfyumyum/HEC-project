@@ -6,13 +6,13 @@ class Visualizer:
 
     def __init__(self,data):
             self.data = data
-        
+
     def time_series(self):
           df = self.data
           df.set_index(df.columns[0],inplace=True)
           print(df,'jio')
           res = sns.lineplot(x=df.index,y=df.columns[0], data=df)
-          res.set(xlabel=df.index.name,ylabel=df.columns[0],title='Time Series')
+          res.set(xlabel=df.index.name,ylabel=df.columns[0],title=f"Time Series of {df.columns[0]} versus group")
           plt.show()
           return
     
@@ -71,5 +71,38 @@ class Visualizer:
           plt.tight_layout()
           plt.show()
           return
+
+    def health_state_density_curve(self):
+          df = self.data
+          print(df)
+          groups = df[df.columns[2]].unique()
+          hsdi_values = {}
+          plt.figure(figsize=(10,6))
+
+          for group in groups:
+            group_df = df[df[df.columns[2]] == group]
+            obs = df.columns[0]
+            freq = df.columns[1]
+            hsdi = 0
+            x_prev, y_prev = 0,0
+
+            for i, row in group_df.iterrows():
+                  x_i = row[obs]
+                  y_i = row[freq]
+                  hsdi+=(x_i-x_prev) * (y_i+ y_prev)
+                  x_prev, y_prev = x_i, y_i
+            hsdi_values[group] = hsdi
+            print('hsdi values',hsdi_values)  
+            sns.lineplot(data=group_df,x=obs,y=freq, label=f'{group} (HSDI = {hsdi:.2f})')
+
+          plt.plot([0,1],[0,1], color='black',linestyle='-')
+          plt.xlabel('Cumulative Proportion of Observations')
+          plt.ylabel('Cumulative Proportion of Profiles')
+          plt.title('Health State Density Curve')
+          plt.show()
+
+          return
+            
+            
 
             
