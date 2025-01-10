@@ -77,44 +77,47 @@ class Processor:
        
     def paretian(self):
         #outputs a trimmed df showing the paretian classification of group1 vs group2 index profile.
-        if len(self.group_list)!=2:
-            raise ValueError('cant create paretian df if group count!=2')
+        try:
+            if len(self.group_list)!=2:
+                raise ValueError('cant create paretian df if group count!=2')
         
-        group_1 = self.group_list[0]
-        group_2 = self.group_list[1]
+            group_1 = self.group_list[0]
+            group_2 = self.group_list[1]
 
-        df1 = self.siloed_data[group_1]
-        df2 = self.siloed_data[group_2]
+            df1 = self.siloed_data[group_1]
+            df2 = self.siloed_data[group_2]
 
-        df = pd.merge(df1,df2,on=['UID'])
+            df = pd.merge(df1,df2,on=['UID'])
 
-        df[group_1] = df['INDEXPROFILE_x']
-        df[group_2] = df['INDEXPROFILE_y']
+            df[group_1] = df['INDEXPROFILE_x']
+            df[group_2] = df['INDEXPROFILE_y']
 
-        df = df[['UID',group_1,group_2]]
-        df.set_index(['UID'],inplace=True)
+            df = df[['UID',group_1,group_2]]
+            df.set_index(['UID'],inplace=True)
 
-        def check_paretian(row,group_1,group_2):
+            def check_paretian(row,group_1,group_2):
 
-            baseline = list(str(row[group_1]))
-            follow = list(str(row[group_2]))
+                baseline = list(str(row[group_1]))
+                follow = list(str(row[group_2]))
 
-            delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, follow)]
+                delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, follow)]
 
-            if all (d==0 for d in delta):
-                return "Same"
-            
-            elif all (d>0 for d in delta):
-                return "Worse"
-            
-            elif all (d<0 for d in delta):
-                return "Better"
-            
-            return "Mixed/uncategorised"
+                if all (d==0 for d in delta):
+                    return "Same"
+                
+                elif all (d>0 for d in delta):
+                    return "Worse"
+                
+                elif all (d<0 for d in delta):
+                    return "Better"
+                
+                return "Mixed/uncategorised"
 
-        df['Paretian class'] = df.apply(check_paretian,group_1=group_1,group_2=group_2,axis=1)
-
-        return df
+            df['Paretian class'] = df.apply(check_paretian,group_1=group_1,group_2=group_2,axis=1)
+            return df
+        except ValueError as e:
+            print(f"Error:{e}")
+            return None
     
     def top_frequency (self):
         #input whole dataframe

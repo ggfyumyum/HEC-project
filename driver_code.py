@@ -16,8 +16,6 @@ raw_data = pd.read_csv('fake_data.csv')
 decrement_table = pd.read_excel('VS_decrements.xlsx')
 multiple_groups = True
 group_col = 'TIME_INTERVAL'
-group1 = 'Preop'
-group2 = 'Postop'
 country = 'NewZealand'
 
 #if there is a valueset available, use it. Otherwise, use the decrement table to generate a fresh one.
@@ -68,7 +66,7 @@ def show_desc(siloed_data):
 show_desc(siloed_data)
 
 #*************************** PLOTTING FUNCTIONS **********************************************
-
+'''
 #histogram of the dimension scores from the whole dataset
 as_pct = Processor(data).get_percent()
 visualizer(as_pct).histogram()
@@ -80,9 +78,11 @@ for key, item in siloed_data.items():
 visualizer(grouped_pct).histogram_by_group()
 
 #health profile grid, requires the paretian dataframe
-visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
+if len(group_list)==2:
+    visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
 
 #time series of the binary score change
 visualizer(ts_delta_binary).time_series()
 
 print('done')
+'''

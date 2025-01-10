@@ -9,7 +9,7 @@ print('running data generator')
 #num is the people per group, NOT the total num.
 
 num = 100
-time_intervals = 2
+time_intervals = 3
 
 #generate up to N intervals
 intervals = []
@@ -17,8 +17,9 @@ for time in range(time_intervals):
     intervals.append('interval'+str(time))
 
 #pre-labelled intervals for N = 3
-l = ['Preop','Postop','Future']
-intervals = l[:time_intervals]
+if time_intervals <=3:
+    l = ['Preop','Postop','Future']
+    intervals = l[:time_intervals]
 
 gender_assignment = ['M','F']
 
