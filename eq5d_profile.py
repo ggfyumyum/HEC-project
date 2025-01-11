@@ -12,18 +12,8 @@ class Eq5dvalue:
         self.data = data
         self.country = country
         self.utils = None
-        self.util_to_rank = self.create_util_ranking()
 
-    def create_util_ranking(self):
-        #rank the indexes based on util from 1 to 3125
-        #store the result in a hashmap with the key as index, rank as value
-        df = pd.DataFrame(self.value_set[self.country])
-        df.sort_values(by=self.country,ascending=False,inplace=True)
-        df.reset_index(inplace=True)
 
-        result = {row['INDEX']:index +1 for index, row in df.iterrows()}
-        return result
-    
     def calculate_util(self):
         #this function will calculate the utility values for each patient, based on the weights and the profile.
         #return a new df which has the util value appended to the original data.
@@ -32,21 +22,32 @@ class Eq5dvalue:
         df = self.data
     
         #append the utility values to the original data
-        util_values = []
+        self.util_values = []
         for index,row in df.iterrows():
             key= row['INDEXPROFILE']
-            util_values.append(val.loc[key,country])
-        df['UTILITY'] = util_values
+            self.util_values.append(val.loc[key,country])
+        df['UTILITY'] = self.util_values
+
+        def create_util_ranking(utility_list):
+            #rank the utility scores from 1 to n for a given list of utility scores
+            #store the result in a hashmap with the key as index, rank as value
+            df.sort_values(by='UTILITY',ascending=False,inplace=True)
+            df.reset_index(inplace=True)
+            result = {row['INDEXPROFILE']:index+1 for index, row in df.iterrows()}
+            return result
         
+        util_to_rank = create_util_ranking(df)
         #append the utility rank score to the original data
         ranked_util = []
         for index,row in df.iterrows():
             key= row['INDEXPROFILE']
-            ranked_util.append(self.util_to_rank[key])
+            ranked_util.append(util_to_rank[key])
         df['RANKED_UTILITY'] = ranked_util
 
         self.utils = df
         return self.utils
+    
+
     
 
 

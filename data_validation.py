@@ -59,7 +59,7 @@ class Validator:
     
     def transpose_data(self):
         pass
-    #this function can be called if the data is in a longitudinal format
+        #this function can be called if the data is in a longitudinal format
 
 
 

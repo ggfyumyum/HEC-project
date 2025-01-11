@@ -13,6 +13,9 @@ class Processor:
         self.df = pd.DataFrame(data)
         self.group_col = group_col
         self.group_list = group_list
+        if group_col == 'AGE':
+            #change age to groups
+            pass
 
 
         #If there are multiple groups detected, split the data into dataframes with one group each
@@ -25,8 +28,13 @@ class Processor:
             self.trim_df = self.df[['MO','SC','UA','PD','AD']]
             self.sum_df = self.trim_df.apply(lambda c: c.value_counts().reindex(range(1,6), fill_value = 0)).T
     
+    def cont_to_cat(self):
+        #change age to agegroup
+        df = self.df
+        return
+    
     def simple_desc(self):
-        #Provide a combined table which shows the n and % of people who responded with each datatype, for a single group (e.g. pre-op)
+        #Provide a combined table which shows the n and % of people who responded with each score, for each dimension, for a single group (e.g. pre-op)
         df = self.sum_df
         as_percent = df.div(df.sum(axis=0),axis=1).mul(100).round(1)
         
@@ -128,6 +136,7 @@ class Processor:
     def hpg(self, paretian_df,group1='Preop',group2='Postop'):
         #This function requires a special input, paretian classification input and util ranking
         #outputs a df which can be used to create a health profile grid
+        #adj input parameters
 
         df = self.df
 
@@ -220,9 +229,9 @@ class Processor:
 
     #extra
     #shannons indices
-    #health state density curve
+    #health state density curve - DONE
     #EQVAS - regression analysis
-    #group by demographic
+    #group by demographic - to do
 
     #heteroskedacitiy
     #regression analysis

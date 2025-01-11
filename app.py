@@ -4,10 +4,9 @@ import seaborn as sns
 
 from data_validation import Validator
 from data_analysis import Processor
-from data_vizualisation import visualizer
-from eq5d_profile import eq5dvalue
-from eq5d_decrement_processing import decrement_processing
-
+from data_vizualisation import Visualizer
+from eq5d_profile import Eq5dvalue
+from eq5d_decrement_processing import Decrement_processing
 from shiny import reactive
 from shiny.express import input, ui, render
 
@@ -29,6 +28,7 @@ data
 @render.text
 def slider_val():
     return f"Slider valsss: {input.val()}"
+
 
 #rsconnect add --account ggfyumyum --name ggfyumyum --token 7786280A193F55618C6EE283771D22A9 --secret uapcUJM9pCePsljUVYZX1zgTaSZKX7koVsSxSSpm
 print('just testing!')

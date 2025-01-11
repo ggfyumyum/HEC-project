@@ -15,7 +15,7 @@ print('RUNNING')
 raw_data = pd.read_csv('fake_data.csv')
 decrement_table = pd.read_excel('VS_decrements.xlsx')
 multiple_groups = True
-group_col = 'TIME_INTERVAL'
+group_col = 'GENDER'
 country = 'NewZealand'
 
 #if there is a valueset available, use it. Otherwise, use the decrement table to generate a fresh one.
@@ -48,10 +48,10 @@ data_LSS = Processor(data,group_list,group_col).level_frequency_score()
 avg_utility = Processor(data,group_list,group_col).ts_utility()
 avg_eqvas = Processor(data,group_list,group_col).ts_eqvas()
 
-#print(paretian)
-#print(t10_index)
-#print(ts_delta_binary)
-#print(t10_index)
+print(paretian)
+print(t10_index)
+print(ts_delta_binary)
+print(t10_index)
 
 #print a simple descripton for each group and a binary format description
 def show_desc(siloed_data):
@@ -65,32 +65,36 @@ def show_desc(siloed_data):
         print(binary)
     return
 
-#show_desc(siloed_data)
+show_desc(siloed_data)
 
 #*************************** PLOTTING FUNCTIONS **********************************************
 '''
 #histogram of the dimension scores from the whole dataset
 as_pct = Processor(data).get_percent()
-visualizer(as_pct).histogram()
+Visualizer(as_pct).histogram()
 
 #side-by-side histograms comparing groups
 grouped_pct = {}
 for key, item in siloed_data.items():
     grouped_pct[key] = Processor(item).get_percent()
-visualizer(grouped_pct).histogram_by_group()
+Visualizer(grouped_pct).histogram_by_group()
 
 #health profile grid, requires the paretian dataframe
 if len(group_list)==2:
-    visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
+    Visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
 
 #time series of the binary score change
-visualizer(ts_delta_binary).time_series()
+Visualizer(ts_delta_binary).time_series()
 
-print('done')
 '''
 
-#Visualizer(avg_utility).time_series()
-#Visualizer(avg_eqvas).time_series()
+print(data)
+print('done')
+
+
+
+Visualizer(avg_utility).time_series()
+Visualizer(avg_eqvas).time_series()
 
 hdsc = (Processor(data,group_list,group_col).health_state_density_curve())
 
