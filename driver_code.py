@@ -15,7 +15,7 @@ print('RUNNING')
 raw_data = pd.read_csv('fake_data.csv')
 decrement_table = pd.read_excel('VS_decrements.xlsx')
 multiple_groups = True
-group_col = 'GENDER'
+group_col = 'TIME_INTERVAL'
 country = 'NewZealand'
 
 #if there is a valueset available, use it. Otherwise, use the decrement table to generate a fresh one.
@@ -31,9 +31,8 @@ validated_data = Validator(raw_data,multiple_groups,group_col)
 data = validated_data.data
 group_list = validated_data.group_list
 
-print(group_list,'group lsit')
 #append the utility scores and ranked calculations to the original data
-data = Eq5dvalue(data, value_set,country).calculate_util()
+data_with_util = Eq5dvalue(data, value_set,country).calculate_util()
 
 #create a dictionary with each group having its own dataframe, store it in siloed_data
 siloed_data = Processor(data,group_list,group_col).siloed_data

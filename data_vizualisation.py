@@ -10,7 +10,6 @@ class Visualizer:
     def time_series(self):
           df = self.data
           df.set_index(df.columns[0],inplace=True)
-          print(df,'jio')
           res = sns.lineplot(x=df.index,y=df.columns[0], data=df)
           res.set(xlabel=df.index.name,ylabel=df.columns[0],title=f"Time Series of {df.columns[0]} versus group")
           plt.show()
