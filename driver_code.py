@@ -37,20 +37,25 @@ data_with_util = Eq5dvalue(data, value_set,country).calculate_util()
 #create a dictionary with each group having its own dataframe, store it in siloed_data
 siloed_data = Processor(data,group_list,group_col).siloed_data
 
-#******************************************* DATA ANALYSIS *****************************************************
 
+
+#******************************************* DATA ANALYSIS *****************************************************
 #create some new DFs which can be used for plotting or printed directly for analysis
+
 t10_index = Processor(data,group_list,group_col).top_frequency()
 ts_delta_binary = Processor(data,group_list,group_col).ts_binary()
 paretian = Processor(data,group_list,group_col).paretian()
 data_LSS = Processor(data,group_list,group_col).level_frequency_score()
 avg_utility = Processor(data,group_list,group_col).ts_utility()
 avg_eqvas = Processor(data,group_list,group_col).ts_eqvas()
+hdsc = Processor(data,group_list,group_col).health_state_density_curve()
 
 print(paretian)
 print(t10_index)
 print(ts_delta_binary)
-print(t10_index)
+print(data_LSS)
+print(avg_utility)
+print(avg_eqvas)
 
 #print a simple descripton for each group and a binary format description
 def show_desc(siloed_data):
@@ -67,7 +72,8 @@ def show_desc(siloed_data):
 show_desc(siloed_data)
 
 #*************************** PLOTTING FUNCTIONS **********************************************
-'''
+
+
 #histogram of the dimension scores from the whole dataset
 as_pct = Processor(data).get_percent()
 Visualizer(as_pct).histogram()
@@ -85,18 +91,19 @@ if len(group_list)==2:
 #time series of the binary score change
 Visualizer(ts_delta_binary).time_series()
 
-'''
+#avg util
+Visualizer(avg_utility).time_series()
 
-print(data)
+#eqvas
+Visualizer(avg_eqvas).time_series()
+
+#hdsc
+Visualizer(hdsc).health_state_density_curve()
+
+
 print('done')
 
 
 
-Visualizer(avg_utility).time_series()
-Visualizer(avg_eqvas).time_series()
 
-hdsc = (Processor(data,group_list,group_col).health_state_density_curve())
 
-print('original data', hdsc)
-
-Visualizer(hdsc).health_state_density_curve()
