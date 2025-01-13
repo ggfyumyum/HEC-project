@@ -25,8 +25,16 @@ else:
     value_set = Decrement_processing(decrement_table).generate_value_set()
     Decrement_processing.export_value_set(value_set)
 
+#filter the data by filter if needed
+raw_data = Validator.apply_filter(raw_data)
+#only see the male group
+raw_data = Validator.apply_filter(raw_data,group='GENDER',subset='M')
+
 #run the raw data through the validator
 validated_data = Validator(raw_data,multiple_groups,group_col)
+
+
+
 
 data = validated_data.data
 group_list = validated_data.group_list
@@ -36,7 +44,6 @@ data_with_util = Eq5dvalue(data, value_set,country).calculate_util()
 
 #create a dictionary with each group having its own dataframe, store it in siloed_data
 siloed_data = Processor(data,group_list,group_col).siloed_data
-
 
 #******************************************* DATA ANALYSIS *****************************************************
 #create some new DFs which can be used for plotting or printed directly for analysis

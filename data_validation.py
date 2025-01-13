@@ -54,6 +54,12 @@ class Validator:
         print('new dataframe',self.data.shape)      
                            
         return self.data
+    
+    @staticmethod
+    def apply_filter(data, group='None', subset='None'):
+        if  group!='None' and subset!='None':
+            data = data[data[group==subset]]
+        return data
 
     def get_data(self):
         return self.data
