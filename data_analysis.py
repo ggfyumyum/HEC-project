@@ -143,8 +143,8 @@ class Processor:
         df_1 = df[df[self.group_col]==group1]
         df_2 = df[df[self.group_col]==group2]
         
-        paretian_df['preop_ranking'] = paretian_df.index.map(df_1.set_index('UID')['RANKED_UTILITY'])
-        paretian_df['postop_ranking'] = paretian_df.index.map(df_2.set_index('UID')['RANKED_UTILITY'])
+        paretian_df['preop_ranking'] = paretian_df.index.map(df_1.set_index('UID')['TOTAL_RANKED_UTILITY'])
+        paretian_df['postop_ranking'] = paretian_df.index.map(df_2.set_index('UID')['TOTAL_RANKED_UTILITY'])
 
         paretian_df.to_csv('xyz.csv')
 
@@ -209,6 +209,11 @@ class Processor:
 
         return cumulative_df
 
+    def utility_density(self):
+        df = self.df
+        df['rounded_utility'] = df['UTILITY'].round(2)
+        return df
+
 
     #todo 
 
@@ -217,25 +222,28 @@ class Processor:
     #health profile grid - DONE
     #level sum score - DONE
     #level frequency score - DONE
-
     #Time series utility - DONE
     #EQ VAS time series - DONE
     #simple descriptive statistics - DONE
     #data validation - DONE
-    #country select validation
-    #flexible country selection
+
     #error handling - DONE
     #missing imputation - DONE
+    #group by demographic - DONE
+
+    #country select validation
+    #flexible country selection
+    #statsitical analysis of density plot
+    #bias data generator
 
     #extra
     #shannons indices
     #health state density curve - DONE
     #EQVAS - regression analysis
-    #group by demographic - to do
+
 
     #heteroskedacitiy
     #regression analysis
-    #reordering function
 
 
 

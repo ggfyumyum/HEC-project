@@ -30,7 +30,8 @@ class Validator:
         group_col = self.data[self.group_col]
         unique_values = group_col.unique().tolist()
         return unique_values
-        
+
+
     def check_data(self):
         invalid_values = 0
         missing_values = 0

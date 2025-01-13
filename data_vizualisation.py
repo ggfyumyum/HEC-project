@@ -101,6 +101,22 @@ class Visualizer:
           plt.show()
 
           return
+    
+    def utility_density (self):
+          df = self.data
+          print(df)
+          plt.figure(figsize=(10,6))
+          sns.kdeplot(data=df, x='rounded_utility', hue = df.columns[2], fill=True, common_norm = False, alpha = 0.5)
+          plt.title("Distribution of Health Utilities by Group", fontsize=16)
+          plt.xlabel("Health Utility (Rounded to Nearest 0.05)", fontsize=12)
+          plt.ylabel("Density", fontsize=12)
+          plt.legend(title="Group")
+          plt.legend(title="Group", bbox_to_anchor=(1.05, 1), loc='upper left')
+          plt.grid(axis="y", linestyle="--", alpha=0.7)
+          plt.tight_layout()
+          plt.show()
+          return
+    
             
             
 

@@ -44,13 +44,24 @@ class Eq5dvalue:
             ranked_util.append(util_to_rank[key])
         df['RANKED_UTILITY'] = ranked_util
 
+        #also create a new rank which is the index rank out of the TOTAL list of utilities for given country
+        total_ranking_df = val[country].reset_index().rename(columns={country: 'UTILITY'})
+        total_ranking_df.sort_values(by='UTILITY', ascending=False, inplace=True)
+        total_ranking_df.reset_index(drop=True, inplace=True)
+
+        print(total_ranking_df)
+
+        total_util_ranking = {row['INDEX']: index + 1 for index, row in total_ranking_df.iterrows()}
+
+        total_ranked_util = []
+        for index, row in df.iterrows():
+            key = row['INDEXPROFILE']
+            total_ranked_util.append(total_util_ranking[key])
+        df['TOTAL_RANKED_UTILITY'] = total_ranked_util
+
+
         self.utils = df
         return self.utils
-    
-
-    
-
-
 
 
 

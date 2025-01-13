@@ -38,7 +38,6 @@ data_with_util = Eq5dvalue(data, value_set,country).calculate_util()
 siloed_data = Processor(data,group_list,group_col).siloed_data
 
 
-
 #******************************************* DATA ANALYSIS *****************************************************
 #create some new DFs which can be used for plotting or printed directly for analysis
 
@@ -49,6 +48,7 @@ data_LSS = Processor(data,group_list,group_col).level_frequency_score()
 avg_utility = Processor(data,group_list,group_col).ts_utility()
 avg_eqvas = Processor(data,group_list,group_col).ts_eqvas()
 hdsc = Processor(data,group_list,group_col).health_state_density_curve()
+
 
 print(paretian)
 print(t10_index)
@@ -73,7 +73,6 @@ show_desc(siloed_data)
 
 #*************************** PLOTTING FUNCTIONS **********************************************
 
-
 #histogram of the dimension scores from the whole dataset
 as_pct = Processor(data).get_percent()
 Visualizer(as_pct).histogram()
@@ -88,9 +87,6 @@ Visualizer(grouped_pct).histogram_by_group()
 if len(group_list)==2:
     Visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
 
-#time series of the binary score change
-Visualizer(ts_delta_binary).time_series()
-
 #avg util
 Visualizer(avg_utility).time_series()
 
@@ -99,6 +95,12 @@ Visualizer(avg_eqvas).time_series()
 
 #hdsc
 Visualizer(hdsc).health_state_density_curve()
+
+
+data = Processor(data_with_util,group_list,group_col).utility_density()
+
+print(data)
+Visualizer(data).utility_density()
 
 
 print('done')
