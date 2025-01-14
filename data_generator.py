@@ -1,49 +1,56 @@
-import pandas as pd
+import pandas as p_d
 import random
 
-print('running data generator')
+# Parameters
+num = 100  # Number of patients
+time_intervals = 3  # Number of time intervals
 
-#fake data generator. This is designed for one group only.
+# Time intervals
+l = ['Preop', 'Postop', 'Future']
+intervals = l[:time_intervals]
 
-#group count = the number of time intervals measured.
-#num is the people per group, NOT the total num.
-#make sure uid is same
+# Gender assignment
+gender_assignment = ['M', 'F']
 
+# Unique IDs
+UID = [i for i in range(1, (num + 1))]
 
-num = 1000
-time_intervals = 2
-
-#generate up to N intervals
-intervals = []
-for time in range(time_intervals):
-    intervals.append('interval'+str(time))
-
-#pre-labelled intervals for N = 3
-if time_intervals <=3:
-    l = ['Preop','Postop','Future']
-    intervals = l[:time_intervals]
-
-gender_assignment = ['M','F']
-
-UID = [i for i in range(1,(num+1))]
-
+# Dictionary to store patient data
 d1 = {}
 for patient in UID:
     d1[patient] = []
 
+# Generate random gender, age, and EQVAS for each UID
+patient_info = {}
 for patient in UID:
-    for t in range(time_intervals):
-        d1[patient].append([intervals[t],random.randint(1,100),gender_assignment[random.randint(0,1)],random.randint(1,5),random.randint(1,5),random.randint(1,5),random.randint(1,5),random.randint(1,5),random.randint(1,100)])
+    gender = gender_assignment[random.randint(0, 1)]
+    age = random.randint(1, 100)
+    eqvas = random.randint(1, 100)
+    patient_info[patient] = [gender, age, eqvas]
 
+# Generate random MO, SC, UA, PD, AD for each time interval
+for patient in UID:
+    gender, age, eqvas = patient_info[patient]
+    for t in range(time_intervals):
+        mo = random.randint(1, 5)
+        sc = random.randint(1, 5)
+        ua = random.randint(1, 5)
+        pd = random.randint(1, 5)
+        ad = random.randint(1, 5)
+        d1[patient].append([intervals[t], age, gender, mo, sc, ua, pd, ad, eqvas])
+
+# Create rows for DataFrame
 rows = []
 for uid, interval in d1.items():
     for interval in interval:
         rows.append([uid] + interval)
 
-column = ["UID",'TIME_INTERVAL','AGE','GENDER',"MO","SC","UA","PD","AD","EQVAS"]
+# Define column names
+columns = ["UID", "TIME_INTERVAL", "AGE", "GENDER", "MO", "SC", "UA", "PD", "AD", "EQVAS"]
 
-df = pd.DataFrame(rows, columns = column)
-df.insert(9,'INDEXPROFILE',df[["MO","SC","UA","PD","AD"]].apply(lambda row: ''.join(row.astype(str)),axis=1))
+# Create DataFrame
+df = p_d.DataFrame(rows, columns=columns)
+df.insert(9, 'INDEXPROFILE', df[["MO", "SC", "UA", "PD", "AD"]].apply(lambda row: ''.join(row.astype(str)), axis=1))
 df.to_csv('fake_data.csv', index=False)
 
 print(df.head(30))
