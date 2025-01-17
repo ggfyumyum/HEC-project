@@ -35,7 +35,7 @@ if filter:
     raw_data = Validator.apply_filter(raw_data,group='GENDER',subset='M')
 
 #run the raw data through the validator
-validated_data = Validator(raw_data,multiple_groups,group_col)
+validated_data = Validator(raw_data,group_col)
 
 data = validated_data.data
 group_list = validated_data.group_list

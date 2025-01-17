@@ -3,15 +3,14 @@ import datetime as dt
 
 class Validator:
     
-    def __init__(self, raw_data, multiple_groups,group_col):
+    def __init__(self, raw_data,group_col='Default'):
 
         #inputs = raw data, name of the column which the groups are in
         self.data = raw_data
-        self.multiple_groups = multiple_groups
         self.group_col = group_col
         self.required_columns = ['MO', 'SC', 'UA', 'PD', 'AD','EQVAS']
         self.validate_data()
-        self.group_list = self.check_groups()
+        self.check_groups()
         self.data = self.check_data()
         
     def validate_data(self):
@@ -24,11 +23,13 @@ class Validator:
             raise ValueError('Invalid data input')
 
     def check_groups(self):
-        if not self.multiple_groups:
-            return []
+        if self.group_col == 'Default':
+            self.group_list = []
+            return
         group_col = self.data[self.group_col]
         unique_values = group_col.unique().tolist()
-        return unique_values
+        self.group_list = unique_values
+        return
 
 
     def check_data(self):
