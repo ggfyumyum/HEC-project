@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 from data_validation import Validator
 from data_analysis import Processor
@@ -12,11 +13,13 @@ from eq5d_decrement_processing import Decrement_processing
 print('RUNNING')
 
 #Required raw inputs
-raw_data = pd.read_csv('fake_data.csv')
+raw_data = pd.read_csv('knee_data.csv')
 decrement_table = pd.read_excel('VS_decrements.xlsx')
 multiple_groups = True
 group_col = 'TIME_INTERVAL'
 country = 'NewZealand'
+
+filter = False
 
 #if there is a valueset available, use it. Otherwise, use the decrement table to generate a fresh one.
 if os.path.exists('valueset_data.csv'):
@@ -25,10 +28,11 @@ else:
     value_set = Decrement_processing(decrement_table).generate_value_set()
     Decrement_processing.export_value_set(value_set)
 
-#filter the data by filter if needed
-raw_data = Validator.apply_filter(raw_data)
-#only see the male group
-raw_data = Validator.apply_filter(raw_data,group='GENDER',subset='M')
+if filter:
+    #filter the data by filter if needed
+    raw_data = Validator.apply_filter(raw_data)
+    #only see the male group
+    raw_data = Validator.apply_filter(raw_data,group='GENDER',subset='M')
 
 #run the raw data through the validator
 validated_data = Validator(raw_data,multiple_groups,group_col)
@@ -68,7 +72,7 @@ def show_desc(siloed_data):
         simple = Processor(group_data).simple_desc()
         binary = Processor(group_data).binary_desc()
         print('*' * 100)
-        print(group_name + ' group')
+        print(group_name, 'group')
         print(simple)
         print(binary)
     return
@@ -89,7 +93,7 @@ Visualizer(grouped_pct).histogram_by_group()
 
 #health profile grid, requires the paretian dataframe
 if len(group_list)==2:
-    Visualizer(Processor(data,group_list,group_col).hpg(paretian)).hpg()
+    Visualizer(Processor(data,group_list,group_col).hpg(paretian,group_list[0],group_list[1])).hpg()
 
 #avg util
 Visualizer(avg_utility).time_series()
@@ -101,11 +105,11 @@ Visualizer(avg_eqvas).time_series()
 Visualizer(hdsc).health_state_density_curve()
 
 
-data = Processor(data_with_util,group_list,group_col).utility_density()
+#data = Processor(data_with_util,group_list,group_col).utility_density()
 
-print(data)
-Visualizer(data).utility_density()
+#Visualizer(data).utility_density()
 
+plt.show()
 
 print('done')
 

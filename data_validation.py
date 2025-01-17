@@ -25,7 +25,6 @@ class Validator:
 
     def check_groups(self):
         if not self.multiple_groups:
-            print('Single group specified')
             return []
         group_col = self.data[self.group_col]
         unique_values = group_col.unique().tolist()

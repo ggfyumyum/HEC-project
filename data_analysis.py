@@ -148,7 +148,11 @@ class Processor:
 
         paretian_df.to_csv('xyz.csv')
 
-        return paretian_df
+        hpg_df = paretian_df
+
+        print(hpg_df)
+
+        return hpg_df
     
     def level_sum_score(self):
         dimensions = ['MO','SC','UA','PD','AD']
