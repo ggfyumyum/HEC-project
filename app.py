@@ -13,36 +13,8 @@ from shiny import App, ui, render
 
 # Define the UI
 app_ui = ui.page_fluid(
-    ui.tags.style("""
-        .container {
-            display: flex;
-            flex-direction: row;
-            width: 100%;
-        }
-        .left-card {
-            flex: 1;
-            padding: 10px;
-            margin-right: 10px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .right-card {
-            flex: 2;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .center-table {
-            overflow-x: auto;
-            width: 100%;
-            margin: 0 auto;
-            text-align: center;
-        }
-    """),
-    ui.div(
-        ui.div(
+    ui.navset_tab(
+        ui.nav_panel("Home",
             ui.h2("Simple Shiny App"),
             ui.input_text("country", "Enter country:", ""),
             ui.input_file("raw_input", "Upload raw data to be analysed"),
@@ -50,19 +22,15 @@ app_ui = ui.page_fluid(
             ui.output_ui("group_col_ui"),
             ui.output_ui("df_ui"),
             ui.output_text("hello_text"),
-            class_="left-card"
+            ui.output_plot("time_series_plot")
         ),
-        ui.div(
-            ui.div(
-                ui.output_table("dataframe_output"),
-                class_="center-table"
-            ),
-            class_="right-card"
-        ),
-        class_="container"
+        ui.nav_panel("Page 2",
+            ui.h2("Page 2"),
+            ui.output_table("dataframe_output"),
+            ui.p("This is the second page.")
+        )
     )
 )
-
 # Define the server logic
 def server(input, output, session):
     raw_data = reactive.Value(None)
@@ -246,4 +214,5 @@ app = App(app_ui, server)
 
 if __name__ == "__main__":
     app.run()
+
 
