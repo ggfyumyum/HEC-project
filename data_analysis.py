@@ -7,7 +7,7 @@ import seaborn as sns
 
 class Processor:
 
-    def __init__(self, data, group_list=[],group_col='Default'):
+    def __init__(self, data, group_list=[],group_col='None'):
 
         #The processor can accept two types of data, one type is the entire dataset. The other is a dataset containing a single group, for example only pre-op patients. 
         self.df = pd.DataFrame(data)
@@ -19,7 +19,7 @@ class Processor:
 
 
         #If there are multiple groups detected, split the data into dataframes with one group each
-        if len(group_list)>0:
+        if len(group_list)>1:
             self.siloed_data = {group: data for group, data in self.df.groupby(self.group_col)}
         
         else:
@@ -197,7 +197,10 @@ class Processor:
         cumulative_data = []
 
         for group in groups:
-            group_df = df[df[self.group_col]==group]
+            if len(groups)>1:
+                group_df = df[df[self.group_col]==group]
+            else:
+                group_df = df
 
             profile_counts = group_df['INDEXPROFILE'].value_counts().reset_index()
             profile_counts.columns = ['INDEXPROFILE', 'frequency']

@@ -3,7 +3,7 @@ import datetime as dt
 
 class Validator:
     
-    def __init__(self, raw_data,group_col='Default'):
+    def __init__(self, raw_data,group_col='None'):
 
         #inputs = raw data, name of the column which the groups are in
         self.data = raw_data
@@ -23,8 +23,8 @@ class Validator:
             raise ValueError('Invalid data input')
 
     def check_groups(self):
-        if self.group_col == 'Default':
-            self.group_list = []
+        if self.group_col == 'None':
+            self.group_list = ['Whole_dataset']
             return
         group_col = self.data[self.group_col]
         unique_values = group_col.unique().tolist()

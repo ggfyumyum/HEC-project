@@ -1,3 +1,4 @@
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -5,45 +6,83 @@ import os
 
 from data_validation import Validator
 from data_analysis import Processor
-from data_vizualisation import Visualizer
+from data_vizualisation import Visualizer  # Import the Visualizer class
 from eq5d_profile import Eq5dvalue
 from shiny import reactive
 from shiny import App, ui, render
 
 # Define the UI
 app_ui = ui.page_fluid(
-    ui.h2("Simple Shiny App"),
-    ui.input_checkbox("multiple_groups", "Enable Multiple Groups", False),
-    ui.input_text("group_col", "Enter Group Column:", ""),
-    ui.input_text("country", "Enter country:", ""),
-
-    ui.input_file("raw_input", "Upload raw data"),
-    ui.input_file("valueset_input", "Upload valueset"),
-
-    ui.output_text('testing'),
-
+    ui.tags.style("""
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+        }
+        .left-card {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .right-card {
+            flex: 2;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .center-table {
+            overflow-x: auto;
+            width: 100%;
+            margin: 0 auto;
+            text-align: center;
+        }
+    """),
     ui.div(
-        ui.output_table("dataframe_output"),
-        style="overflow-x: auto; width: 100%;"
-    ),
-    ui.output_text("hello_text"),
-    ui.output_plot('time_series_plot')
+        ui.div(
+            ui.h2("Simple Shiny App"),
+            ui.input_text("country", "Enter country:", ""),
+            ui.input_file("raw_input", "Upload raw data to be analysed"),
+            ui.input_file("valueset_input", "Upload valueset"),
+            ui.output_ui("group_col_ui"),
+            ui.output_ui("df_ui"),
+            ui.output_text("hello_text"),
+            class_="left-card"
+        ),
+        ui.div(
+            ui.div(
+                ui.output_table("dataframe_output"),
+                class_="center-table"
+            ),
+            class_="right-card"
+        ),
+        class_="container"
+    )
 )
 
 # Define the server logic
 def server(input, output, session):
     raw_data = reactive.Value(None)
-    validated_data = reactive.Value(None)
     value_set = reactive.Value(None)
-    processed_data = reactive.Value(None)
+    validated_data = reactive.Value(None)  # Reactive value to store validated data
+    processed_data = reactive.Value(None)  # Reactive value to store processed data
+    data_tables = reactive.Value({})  # Reactive value to store data tables
     group_list = reactive.Value(None)
-    extra_vars = reactive.Value({}) #store additional var here
-    data_tables = reactive.Value({})
-    validation_status = reactive.Value(False)
+
+    validation_status = reactive.Value(False)  # Reactive value to track validation status
+    ready_to_validate = reactive.Value(False)
+    column_choices = reactive.Value(['None'])
+    df_output_choices = reactive.Value(['No Dataframes Created'])
+
+    # Set default values
+    default_country = "NewZealand"
 
     @reactive.Effect
     @reactive.event(input.raw_input)
-    def _():
+    def load_raw_data():
         file_info = input.raw_input()
         if file_info:
             if isinstance(file_info, list):
@@ -53,10 +92,11 @@ def server(input, output, session):
                 raw_data.set(pd.read_csv(file_path))
             elif file_path.endswith('.xlsx'):
                 raw_data.set(pd.read_excel(file_path))
+        print("Raw data loaded:", raw_data.get())  # Debugging statement
 
     @reactive.Effect
     @reactive.event(input.valueset_input)
-    def _():
+    def load_value_set():
         file_info = input.valueset_input()
         if file_info:
             if isinstance(file_info, list):
@@ -67,87 +107,127 @@ def server(input, output, session):
             elif file_path.endswith('.xlsx'):
                 value_set.set(pd.read_excel(file_path))
 
+
     @reactive.Effect
-    @reactive.event(raw_data, input.group_col, input.multiple_groups)
-    def validate_data():
-        print('running validation')
+    @reactive.event(raw_data)
+    def extract_group_col():
+        print("Updating group column options") 
         data = raw_data.get()
-        group_c = input.group_col()
-        
-        multiple_groups = input.multiple_groups()
+        if data is not None:
+            columns = data.columns.tolist()
+            print('The column list:', columns)  # Debugging statement
+            column_choices.set(['None'] + columns)
+            ready_to_validate.set(True)
 
-        if data is not None and group_c is not None:
-            res = Validator(data,group_col=group_c)
-            print(res.group_list,' the group list')
-            print('the data',res.data)
-            group_list.set(res.group_list)
-            validated_data.set(res.data)
-            validation_status.set(True)  # Set validation status to True
-            print('validation has been set true')
-        else:
-            validation_status.set(False)
+    @output
+    @render.ui
+    def group_col_ui():
+        return ui.input_select("group_col", "Select Group Column:", choices=column_choices.get())
 
+
+    @reactive.Effect
+    @reactive.event(raw_data, input.group_col)
+    def validate_data():
+        if ready_to_validate.get():
+            print('Running validation')
+            data = raw_data.get()
+            group_c = input.group_col()
+
+            if data is not None:
+                res = Validator(data, group_col=group_c)
+                print(res.group_list, 'The group list')
+                group_list.set(res.group_list)
+                validated_data.set(res.data)
+                validation_status.set(True)  # Set validation status to True
+                print('Validation has been set true')
+            else:
+                validation_status.set(False)
 
     @reactive.Effect
     def set_util():
         data = validated_data.get()
         values = value_set.get()
-        country = input.country()
-
+        country = input.country() or default_country
         if data is not None and values is not None and country:
             res = Eq5dvalue(data, values, country).calculate_util()
             processed_data.set(res)
         else:
-            processed_data.set(pd.DataFrame({"Message": ["need to input data and VS first"]}))
-        
-    @output
-    @render.text
-    def testing():
-        return input.country()
-    
-    
+            processed_data.set(pd.DataFrame({"Message": ["Need to input data and VS first"]}))
+
+
     @reactive.Effect
-    @reactive.event(processed_data,validation_status)
+    @reactive.event(processed_data, validation_status,input.group_col)
     def process_data():
-        print('trying2')
+        print('Trying to process data')
         if validation_status.get():  # Check if validation was successful
-            country = 'NewZealand'
-            group_c = 'TIME_INTERVAL'
             data = processed_data.get()
             values = value_set.get()
             groups = group_list.get()
 
-            country = input.country()
+            country = input.country() or default_country
             group_c = input.group_col()
-            
-            if data is not None and values is not None and country and group_c:
-                print('trying, group list is',groups)
-                processed = Processor(data, groups, group_col=group_c)
-                data_tables.set({
-                    't10_index': processed.top_frequency(),
-                    'ts_delta_binary': processed.ts_binary(),
-                    'paretian': processed.paretian(),
-                    'data_LSS': processed.level_frequency_score(),
-                    'avg_utility': processed.ts_utility(),
-                    'avg_eqvas': processed.ts_eqvas(),
-                })
-                print("Data tables updated:", data_tables.get())  # Debugging statement
+
+            if data is not None and values is not None and country and group_c=='None':
     
+                print('Trying, group list is', groups, 'group col is',group_c)
+                processed = Processor(data,group_list=['FULL_DATASET'])
+                print(processed.sum_df,'examp')
+                data_tables.set({
+                    'simple_desc':processed.simple_desc(),
+                    'binary_desc':processed.binary_desc(),
+                    't10_index': processed.top_frequency(),
+                    'data_LFS': processed.level_frequency_score(),
+                    'HSDC':processed.health_state_density_curve(),
+                })
+
+            if len(groups)>1:
+                grouped_df = Processor(data, groups, group_col=group_c)
+                current_data_tables = data_tables.get()
+                current_data_tables.update({
+                    'ts_delta_binary': grouped_df.ts_binary(),
+                    'avg_utility': grouped_df.ts_utility(),
+                    'avg_eqvas': grouped_df.ts_eqvas(),
+                })
+                data_tables.set(current_data_tables)
+
+            if len(groups) == 2:
+                current_data_tables = data_tables.get()
+                current_data_tables.update({
+                    'paretian': grouped_df.paretian(),
+                })
+                data_tables.set(current_data_tables)
+
+            print("Data tables updated:", data_tables.get())  # Debugging statement
+
+
+    @output
+    @render.ui
+    def df_ui():
+        return ui.input_select("dataframe_select", "Select df:", choices=df_output_choices.get())
+    
+
+    @reactive.Effect
+    @reactive.event(data_tables,input.group_col)
+    def update_dataframe_select():
+        current_data_tables = data_tables.get()
+        df_output_choices.set(list(current_data_tables.keys()))
 
     @output
     @render.table
     def dataframe_output():
+        selected_df = input.dataframe_select()
         dfs = data_tables.get()
-        data = dfs.get('paretian', pd.DataFrame({"Message": ["need to input data and VS first"]}))
+        data = dfs.get(selected_df, pd.DataFrame({"Message": ["Need to input data and VS first"]}))
         if data is not None and not data.empty:
-            return pd.DataFrame(data)
-        return pd.DataFrame({"Message": ["need to input data and VS first"]})
-    
-        
+            fixed_index = data.reset_index()
+            old_index = data.index.name if data.index.name else 'index'
+            fixed_index.rename(columns={'index': old_index}, inplace=True)
+            return pd.DataFrame(fixed_index)
+
     @output
     @render.text
     def hello_text():
-        return "hello"
+        return input.country() or default_country
     
     @output
     @render.plot
@@ -158,10 +238,12 @@ def server(input, output, session):
             fig = vis.time_series()
             return fig
         return plt.figure()
-        
+
     
+        
 # Create the app
 app = App(app_ui, server)
 
 if __name__ == "__main__":
     app.run()
+
