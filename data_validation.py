@@ -24,7 +24,7 @@ class Validator:
 
     def check_groups(self):
         if self.group_col == 'None':
-            self.group_list = ['Whole_dataset']
+            self.group_list = ['NO_GROUP_CHOSEN']
             return
         group_col = self.data[self.group_col]
         unique_values = group_col.unique().tolist()
