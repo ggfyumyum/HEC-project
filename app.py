@@ -33,18 +33,20 @@ app_ui = ui.page_fluid(
 
             ui.output_text("hello_text"),
             ui.output_table("show_df1"),
-            ui.output_plot("time_series_plot")
+            ui.output_plot("desc_plot")
+            
         ),
         ui.nav_panel("Time-series analysis",
                      
             ui.h2("Display table/plots of the change over time with n time intervals"),
-            ui.output_ui("group_col_ui_page3")
+            ui.output_ui("group_col_ui_page3"),
+
         ),
     )
 )
 # Define the server logic
 def server(input, output, session):
-    raw_data = reactive.Value(None)
+    raw_data = reactive.Value()
     value_set = reactive.Value(pd.read_csv('valueset_data.csv'))
     validated_data = reactive.Value(None)  # Reactive value to store validated data
     processed_data = reactive.Value(None)  # Reactive value to store processed data
@@ -281,13 +283,55 @@ def server(input, output, session):
     
     @output
     @render.plot
-    def time_series_plot():
+    def desc_plot():
+
+        print('running plotfunction')
+        selected_df = input.dataframe_select()
+
         data = processed_data.get()
+        groups = group_list.get()
+        group_c = input.group_col()
+
+        print('selected df',selected_df,'groups',groups)
+        
+        if selected_df == 'top_frequency':
+            return plt.figure()  # Display nothing (empty plot)
+        
         if not data.empty:
-            vis = Visualizer(data)
-            fig = vis.time_series()
+            if groups == ['NO_GROUP_CHOSEN']:
+
+                dfs = data_tables.get()
+                data = dfs[selected_df]
+                vis = Visualizer(data)
+                print('created vis',vis)
+            
+            if selected_df == 'simple_desc':
+                # Placeholder for simple_desc plot
+                data = Processor(validated_data.get())
+                vis = Visualizer(data.get_percent())
+                fig = vis.histogram()
+
+            elif selected_df == 'binary_desc':
+                problems_df = data[['% problems']].copy()
+                problems_df['%no problems'] = 100 - problems_df['% problems']
+                vis = Visualizer(problems_df)
+                fig = vis.histogram()
+
+            elif selected_df == 't10_index':
+                # Placeholder for t10_index plot
+                pass
+            elif selected_df == 'data_LFS':
+                # Placeholder for data_LFS plot
+                pass
+            elif selected_df == 'HSDC':
+                # Placeholder for HSDC plot
+                pass
+            else:  # Default plot
+                return plt.figure()
+            
             return fig
-        return plt.figure()
+        
+        
 
     
         

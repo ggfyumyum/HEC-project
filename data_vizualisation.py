@@ -31,31 +31,13 @@ class Visualizer:
         ax.grid()
         return fig
     
-    def histogram(self):
-          #produce histogram of each dimension
-          
-          df = self.data
-          df = df.melt(var_name='Level',value_name='Percentage',ignore_index=False).reset_index()
-          df.rename(columns={'index':'Dimension'},inplace=True)
 
-          plt.figure(figsize=(12,8))
-          sns.barplot(data=df, x='Dimension',y='Percentage',hue='Level',palette='viridis')
-          plt.xlabel('Dimension')
-          plt.ylabel('Percentage')
-          plt.title('Percentage of Each Level by Dimension')
-          plt.legend(title='Level')
-          plt.grid(axis='y')
-
-          plt.yticks(range(0,51,5))
-          plt.show()
-          return
-    
     def histogram(self):
         df = self.data
         df = df.melt(var_name='Level', value_name='Percentage', ignore_index=False).reset_index()
         df.rename(columns={'index': 'Dimension'}, inplace=True)
         fig, ax = plt.subplots()
-        sns.histplot(data=df, x='Dimension', hue='Level', multiple='stack', ax=ax)
+        sns.barplot(data = df, x='Dimension',y='Percentage', hue='Level', palette='viridis', ax=ax)
         ax.set_title('Histogram of Each Dimension')
         return fig
     
