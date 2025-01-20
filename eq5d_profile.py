@@ -8,7 +8,7 @@ class Eq5dvalue:
     data (pd.DataFrame): The input data containing EQ-5D profiles.
     country (str): The country label for which the utility values are calculated.
     """
-    def __init__(self, data, valueset ,country='NewZealand'):
+    def __init__(self, data: pd.DataFrame, valueset:pd.DataFrame ,country='NewZealand'):
         """
         Initializes the Eq5dvalue class with the given data, value set, and country.
         
@@ -16,14 +16,11 @@ class Eq5dvalue:
             data (pd.DataFrame): The input data containing EQ-5D profiles.
             valueset (pd.DataFrame): The value set containing utility weights.
             country (str): The country label for which the utility values are calculated. Default is 'NewZealand'.
-        Raises:
-            KeyError: If 'INDEX' is not found in the value set columns.
+
         """
         self.value_set = valueset
         if 'INDEX' in self.value_set.columns:
             self.value_set.set_index('INDEX',inplace=True)
-        else:
-            raise KeyError("The value set must contain an 'INDEX' column.")
     
         self.data = data
         self.country = country

@@ -28,12 +28,6 @@ else:
     value_set = Decrement_processing(decrement_table).generate_value_set()
     Decrement_processing.export_value_set(value_set)
 
-if filter:
-    #filter the data by filter if needed
-    raw_data = Validator.apply_filter(raw_data)
-    #only see the male group
-    raw_data = Validator.apply_filter(raw_data,group='GENDER',subset='M')
-
 #run the raw data through the validator
 validated_data = Validator(raw_data)
 

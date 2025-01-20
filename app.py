@@ -107,7 +107,7 @@ def server(input, output, session):
                 value_set.set(pd.read_excel(file_path))
                 
     @reactive.Effect
-    @reactive.event(raw_data)
+    @reactive.event(raw_data,input.country)
     def extract_group_col():
         print('running groupcol extraction')
         data = raw_data.get()
@@ -118,7 +118,7 @@ def server(input, output, session):
             print('ready to validate, column choices are',column_choices.get())
 
     @reactive.Effect
-    @reactive.event(raw_data,ready_to_validate)
+    @reactive.event(raw_data,ready_to_validate,input.country)
     def validate_data():
         if ready_to_validate.get():
             print('Running validation')
@@ -132,7 +132,7 @@ def server(input, output, session):
                 validation_status.set(False)
 
     @reactive.Effect
-    @reactive.event(validation_status)
+    @reactive.event(validation_status,input.country)
     def set_util():
         if validation_status.get():
             print('setting util')
@@ -148,7 +148,7 @@ def server(input, output, session):
     
     @output
     @render.table
-    @reactive.event(raw_data)
+    @reactive.event(raw_data,input.country)
     def rawdata_display():
         df = raw_data.get()
         if df is not None:
@@ -162,7 +162,7 @@ def server(input, output, session):
 
     @output
     @render.table
-    @reactive.event(data_with_util)
+    @reactive.event(data_with_util,input.country)
     def validated_data_display():
         df = data_with_util.get()
         if df is not None:
@@ -179,14 +179,14 @@ def server(input, output, session):
         return ui.input_select("group_col", "Group data By:", choices=column_choices.get())
     
     @reactive.Effect
-    @reactive.event(input.group_col)
+    @reactive.event(input.group_col,input.country)
     def print_group_col():
         group_c = input.group_col()
         print(f"The group_col has been set to: {group_c}")
         
     
     @reactive.Effect
-    @reactive.event(input.group_col)
+    @reactive.event(input.group_col,input.country)
     def process_data():
         print('Trying to process data')
         if util_added.get():  # Check if validation was successful
@@ -407,7 +407,7 @@ def server(input, output, session):
 
 
     @reactive.Effect
-    @reactive.event(util_added,input.group_col_page3)
+    @reactive.event(util_added,input.group_col_page3,input.country)
     def process_ts_data():
         print('generating timeseries data')
         if util_added.get():  # Check if validation was successful
@@ -430,7 +430,7 @@ def server(input, output, session):
     
     @output
     @render.text
-    @reactive.event(input.group_col_page3)
+    @reactive.event(input.group_col_page3,input.country)
     def time_intervals_text():
         group_col = input.group_col_page3()
         if group_col!='TIME_INTERVAL':
@@ -448,7 +448,7 @@ def server(input, output, session):
         return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
     @reactive.Effect
-    @reactive.event(input.group_col_page3)
+    @reactive.event(input.group_col_page3,input.country)
     def update_ts_select():
         ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
