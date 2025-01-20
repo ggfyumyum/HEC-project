@@ -26,7 +26,7 @@ app_ui = ui.page_fluid(
         ),
 
         
-        ui.nav_panel("Data analysis",
+        ui.nav_panel("Descriptive analysis",
             ui.h2("Display tables and plots of data from one or more groups"),
             ui.h2("Select whole analysis to display)"),
 
@@ -241,13 +241,19 @@ def server(input, output, session):
             if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)==2:
                 final = group_data_tables.get()
                 this_data = data_with_util.get().reset_index()
+
                 px_df = Processor(this_data, group_c).paretian()
 
+                group1 = groups_list[0]
+                group2 = groups_list[1]
+
+                hpg = Processor(data,group_c).hpg(px_df,group1,group2)
+
                 for group_name, group_data in all_dfs.items():
-                    final[group_name]['paretian'] = px_df
+                    final[group_name]['paretian/health_profile_grid'] = hpg
 
                 group_data_tables.set(final)
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian'])
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian/health_profile_grid'])
                 
     
 
@@ -325,8 +331,8 @@ def server(input, output, session):
             print('created vis',vis)
 
             if selected_df == 'simple_desc':
-                data = Processor(validated_data.get())
-                vis = Visualizer(data.get_percent())
+                processed = Processor(data)
+                vis = Visualizer(processed.get_percent())
                 fig = vis.histogram()
 
             elif selected_df == 'binary_desc':
@@ -373,6 +379,12 @@ def server(input, output, session):
                 fig = vis.health_state_density_curve()
 
 
+            elif selected_df=='paretian/health_profile_grid':
+
+                hpg = group_data_tables.get()[grouplist[0]]['paretian/health_profile_grid']
+                vis = Visualizer(hpg)
+                fig = vis.hpg()
+
         return fig
     
     @output
@@ -388,7 +400,7 @@ def server(input, output, session):
               
     
     @reactive.Effect
-    @reactive.event(time_series_tables,input.group_col_page3)
+    @reactive.event(time_series_tables,input.group_col_page3,)
     def update_ts_select():
         if input.group_col_page3=='None':
             ts_output_choices.set(['No Choice available'])
@@ -401,9 +413,9 @@ def server(input, output, session):
         if util_added.get():  # Check if validation was successful
             data = data_with_util.get()
             groupcol = input.group_col_page3()
+            valid_ts_columns = ['TIME_INTERVAL','TIMESTAMP','TIME']
 
-            if data is not None and groupcol!='None':
-
+            if data is not None and groupcol in valid_ts_columns:
                 processor = Processor(data,groupcol)
                 wanted_ts = ['ts_delta_binary','avg_utility','avg_eqvas']
                 res = {}
@@ -412,6 +424,9 @@ def server(input, output, session):
 
                 time_series_tables.set(res)
                 ts_output_choices.set(wanted_ts)
+            else:
+                ts_output_choices.set(['No Choice available'])
+
     
     @output
     @render.text
@@ -426,13 +441,16 @@ def server(input, output, session):
             if data is not None:
                 time_groups = Processor(data, group_col).group_list
                 return f"Time intervals found in selected column: {time_groups}"
-        return "Invalid time grouping selection"
-
 
     @output
     @render.ui
     def df_ui2():
         return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
+    
+    @reactive.Effect
+    @reactive.event(input.group_col_page3)
+    def update_ts_select():
+        ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
     @output
     @render.plot
@@ -480,34 +498,3 @@ app = App(app_ui, server)
 
 if __name__ == "__main__":
     app.run()
-
-
-'''
-    @output
-    @render.table
-    def dataframe_output():
-        selected_df = input.dataframe_select()
-        dfs = data_tables.get()
-        data = dfs.get(selected_df, pd.DataFrame({"Message": ["Need to input data and VS first"]}))
-        if data is not None and not data.empty:
-            old_index = data.index.name if data.index.name else 'index'
-            fixed_index = data.reset_index()
-            fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index)
-
-            if len(groups) == 2:
-                current_data_tables = data_tables.get()
-                current_data_tables.update({
-                    'paretian': grouped_df.paretian(),
-                })
-                data_tables.set(current_data_tables)
-if len(groups)>1:
-                grouped_df = Processor(data, groups, group_col=group_c)
-                current_data_tables = data_tables.get()
-                current_data_tables.update({
-                    'ts_delta_binary': grouped_df.ts_binary(),
-                    'avg_utility': grouped_df.ts_utility(),
-                    'avg_eqvas': grouped_df.ts_eqvas(),
-                })
-                data_tables.set(current_data_tables)
-'''
