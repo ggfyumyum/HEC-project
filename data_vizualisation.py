@@ -5,9 +5,10 @@ import seaborn as sns
 class Visualizer:
 
     def __init__(self,data):
-            self.data = data
+        self.data = data.copy()
 
     def time_series(self):
+        print('trying to create ts with raw data',self.data)
         df = self.data
         df.set_index(df.columns[0], inplace=True)
         fig, ax = plt.subplots()

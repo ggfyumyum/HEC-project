@@ -43,12 +43,11 @@ app_ui = ui.page_fluid(
         ui.nav_panel("Time-series analysis",
                      
             ui.h2("Display table/plots of the change over time with n time intervals"),
-
-            
             ui.output_ui("group_col_ui_page3"),
             ui.output_text("time_intervals_text"),
-            #ui.output_ui("df_ui2")
-           
+            ui.output_ui("df_ui2"),
+            ui.output_table("selected_ts_df"),
+            ui.output_plot('time_series_plot')
 
         ),
     )
@@ -291,23 +290,16 @@ def server(input, output, session):
     def show_df1():
         if input.group_col()=='None' or groups.get()=='NO_GROUP_CHOSEN':
             tables = data_tables.get()
-            print('tables available')
-            
+        
         else:
             table_list = group_data_tables.get()
-            print('a group was inputted, tabled list')
+  
             tables = table_list[input.group_options()]
 
-        
-        print('looking for the df now')
 
         df = tables[input.dataframe_select()]
 
-        print('the df i chose to display',df)
-
         if df is not None:
-            print('now printing df')
-
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
@@ -441,11 +433,48 @@ def server(input, output, session):
     @render.ui
     def df_ui2():
         return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
-              
     
+    @output
+    @render.plot
+    def time_series_plot():
+        selected_ts = input.ts_select()
+        
+        if selected_ts == 'No Time series Created':
+            return plt.figure()  # Display nothing (empty plot)
+        
+        ts_data = time_series_tables.get().get(selected_ts)
+        if ts_data is not None:
+            vis = Visualizer(ts_data)
+            fig = vis.time_series()  # Assuming Visualizer has a method time_series()
+            return fig
+        
+        return plt.figure()  # Default empty plot if no data or no matching selection
     
-    
+    @output
+    @render.table
+    def selected_ts_df():
+        selected_ts = input.ts_select()
+        
+        if selected_ts == 'No Time series Created':
+            return pd.DataFrame({"Message": ["No time series selected"]})
+        
+        ts_data = time_series_tables.get().get(selected_ts)
 
+        print('ts_data',ts_data)
+
+        if ts_data is not None:
+
+            ts_copy = ts_data.copy()
+
+            old_index = ts_copy.index.name if ts_copy.index.name else 'index'
+            fixed_index = ts_copy.reset_index()
+            fixed_index.rename(columns={'index': old_index}, inplace=True)
+
+            return pd.DataFrame(fixed_index).head(10)
+        
+        return pd.DataFrame({"Message": ["No data available"]})
+    
+    
 # Create the app
 app = App(app_ui, server)
 
