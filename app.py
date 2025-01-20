@@ -77,7 +77,6 @@ def server(input, output, session):
                 raw_data.set(pd.read_csv(file_path))
             elif file_path.endswith('.xlsx'):
                 raw_data.set(pd.read_excel(file_path))
-        print("Raw data loaded:", raw_data.get())  # Debugging statement
 
     @reactive.Effect
     @reactive.event(input.valueset_input)
@@ -97,14 +96,11 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(raw_data)
     def extract_group_col():
-        print("Updating group column options") 
         data = raw_data.get()
         if data is not None:
             columns = data.columns.tolist()
-            print('The column list:', columns)  # Debugging statement
             column_choices.set(['None'] + columns)
             ready_to_validate.set(True)
-
 
     @output
     @render.ui
@@ -166,13 +162,12 @@ def server(input, output, session):
             if data is not None and values is not None and country and group_c=='None':
                 print('Trying, group list is', groups, 'group col is',group_c)
                 processed = Processor(data,group_list=['NO_GROUP_CHOSEN'])
-                print(processed.sum_df,'examp')
                 data_tables.set({
                     'simple_desc':processed.simple_desc(),
                     'binary_desc':processed.binary_desc(),
                     't10_index': processed.top_frequency(),
                     'data_LFS': processed.level_frequency_score(),
-                    'HSDC':processed.health_state_density_curve(),
+                    'health_state_density_curve':processed.health_state_density_curve(),
                 })
 
             if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups)>1:
@@ -189,6 +184,12 @@ def server(input, output, session):
             }
             for group_name, group_data in all_dfs.items()
         }           
+                
+                hsdc_df = Processor(data,groups,group_c).health_state_density_curve()
+                for group_name, group_data in res.items():
+                    res[group_name]['health_state_density_curve'] = hsdc_df
+                
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve'])
                 group_data_tables.set(res)
             
             if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups)==2:
@@ -200,9 +201,8 @@ def server(input, output, session):
                     final[group_name]['paretian'] = px_df
 
                 group_data_tables.set(final)
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','paretian'])
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian'])
 
-            print("Data tables updated:", data_tables.get())  # Debugging statement
 
     
 
@@ -215,19 +215,18 @@ def server(input, output, session):
     @output
     @render.table
     def show_df1():
-        if input.group_col()=='None':
+        if input.group_col()=='None' or input.group_col()=='NO_GROUP_CHOSEN':
             tables = data_tables.get()
             
         else:
             table_list = group_data_tables.get()
-            print('table list',table_list)
-            print('filter by',input.group_options())
+
             tables = table_list[input.group_options()]
 
         df = tables[input.dataframe_select()]
 
         if df is not None:
-            print('the df is',df)
+
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
@@ -285,28 +284,19 @@ def server(input, output, session):
     @render.plot
     def desc_plot():
 
-        print('running plotfunction')
         selected_df = input.dataframe_select()
-
         data = processed_data.get()
         groups = group_list.get()
         group_c = input.group_col()
-
-        print('selected df',selected_df,'groups',groups)
         
-        if selected_df == 'top_frequency':
-            return plt.figure()  # Display nothing (empty plot)
-        
-        if not data.empty:
-            if groups == ['NO_GROUP_CHOSEN']:
+        if groups == ['NO_GROUP_CHOSEN']:
 
-                dfs = data_tables.get()
-                data = dfs[selected_df]
-                vis = Visualizer(data)
-                print('created vis',vis)
-            
+            dfs = data_tables.get()
+            data = dfs[selected_df]
+            vis = Visualizer(data)
+            print('created vis',vis)
+
             if selected_df == 'simple_desc':
-                # Placeholder for simple_desc plot
                 data = Processor(validated_data.get())
                 vis = Visualizer(data.get_percent())
                 fig = vis.histogram()
@@ -317,20 +307,46 @@ def server(input, output, session):
                 vis = Visualizer(problems_df)
                 fig = vis.histogram()
 
-            elif selected_df == 't10_index':
+            elif selected_df == 'health_state_density_curve':
+                data = data_tables.get()['health_state_density_curve']
+                vis = Visualizer(data)
+                fig = vis.health_state_density_curve()
+
+            elif selected_df == 't10_index' or selected_df == 'data_LFS':
                 # Placeholder for t10_index plot
                 pass
-            elif selected_df == 'data_LFS':
-                # Placeholder for data_LFS plot
-                pass
-            elif selected_df == 'HSDC':
-                # Placeholder for HSDC plot
-                pass
-            else:  # Default plot
-                return plt.figure()
+
+        else:
             
-            return fig
-        
+            if selected_df=='simple_desc':
+                grouped_pct = {}
+                siloed = Processor(validated_data.get(),groups,group_c).siloed_data
+
+                for key, item in siloed.items():
+                    grouped_pct[key] = Processor(item).get_percent()
+
+                vis = Visualizer(grouped_pct)
+                fig = vis.histogram_by_group()
+
+            elif selected_df=='binary_desc':
+                dfs = group_data_tables.get()
+                new_dict = {group_name: group_data[selected_df] for group_name, group_data in dfs.items()}
+
+                for key, item in new_dict.items():
+                    as_pct = new_dict[key][['% problems']].copy()
+                    as_pct['%no problems'] = 100 - as_pct['% problems']
+                    new_dict[key] = as_pct
+
+                vis = Visualizer(new_dict)
+                fig = vis.histogram_by_group()
+
+            elif selected_df == 'health_state_density_curve':
+                vis = Visualizer(group_data_tables.get()[groups[0]]['health_state_density_curve'])
+                fig = vis.health_state_density_curve()
+
+
+        return fig
+    
         
 
     

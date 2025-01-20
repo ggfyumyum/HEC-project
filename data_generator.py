@@ -7,7 +7,10 @@ time_intervals = 2  # Number of time intervals
 
 # Time intervals
 l = ['Preop', 'Postop', 'Future']
-intervals = l[:time_intervals]
+if time_intervals<4:
+    intervals = l[:time_intervals]
+else:
+    intervals = [f'interval{i}' for i in range(time_intervals)]
 
 # Gender assignment
 gender_assignment = ['M', 'F']
