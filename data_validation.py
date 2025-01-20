@@ -3,14 +3,13 @@ import datetime as dt
 
 class Validator:
     
-    def __init__(self, raw_data,group_col='None'):
+    def __init__(self, raw_data):
 
         #inputs = raw data, name of the column which the groups are in
         self.data = raw_data
-        self.group_col = group_col
         self.required_columns = ['MO', 'SC', 'UA', 'PD', 'AD','EQVAS']
         self.validate_data()
-        self.check_groups()
+        self.add_indexprofile()
         self.data = self.check_data()
         
     def validate_data(self):
@@ -21,16 +20,12 @@ class Validator:
 
         if pd.DataFrame(self.data).shape[1]<2:
             raise ValueError('Invalid data input')
-
-    def check_groups(self):
-        if self.group_col == 'None':
-            self.group_list = ['NO_GROUP_CHOSEN']
-            return
-        group_col = self.data[self.group_col]
-        unique_values = group_col.unique().tolist()
-        self.group_list = unique_values
-        return
-
+    
+    def add_indexprofile(self):
+        if 'INDEXPROFILE' not in self.data.columns:
+            self.data['INDEXPROFILE'] = self.data.apply(
+                lambda row: f"{row['MO']}{row['SC']}{row['UA']}{row['PD']}{row['AD']}", axis=1
+            )
 
     def check_data(self):
         invalid_values = 0

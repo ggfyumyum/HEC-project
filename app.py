@@ -21,7 +21,9 @@ app_ui = ui.page_fluid(
             ui.input_file("valueset_input", "Upload valueset"),
             ui.h2("Raw data"),
             ui.output_table('rawdata_display'),
-            ui.output_table("dataframe_output"),
+            ui.h2("Processed data"),
+            ui.input_action_button("refresh_button", "Refresh Processed Data"),
+            ui.output_table("validated_data_display"),
         ),
         ui.nav_panel("Data analysis",
             ui.h2("Display tables and plots of data from one or more groups"),
@@ -46,15 +48,19 @@ app_ui = ui.page_fluid(
 )
 # Define the server logic
 def server(input, output, session):
-    raw_data = reactive.Value()
+
     value_set = reactive.Value(pd.read_csv('valueset_data.csv'))
+
+    raw_data = reactive.Value(None)
     validated_data = reactive.Value(None)  # Reactive value to store validated data
-    processed_data = reactive.Value(None)  # Reactive value to store processed data
+    data_with_util = reactive.Value(None)
+    
     data_tables = reactive.Value({})  # Reactive value to store data tables
     group_data_tables = reactive.Value({})
 
-    group_list = reactive.Value(['NO_GROUP_CHOSEN'])
+    groups = reactive.Value(['NO_GROUP_CHOSEN'])
 
+    util_added = reactive.Value(False)
     validation_status = reactive.Value(False)  # Reactive value to track validation status
     ready_to_validate = reactive.Value(False)
     column_choices = reactive.Value(['None'])
@@ -91,21 +97,110 @@ def server(input, output, session):
             elif file_path.endswith('.xlsx'):
                 value_set.set(pd.read_excel(file_path))
                 
-
-
     @reactive.Effect
     @reactive.event(raw_data)
     def extract_group_col():
+        print('running groupcol extraction')
         data = raw_data.get()
         if data is not None:
             columns = data.columns.tolist()
             column_choices.set(['None'] + columns)
             ready_to_validate.set(True)
+            print('ready to validate')
+
+    @reactive.Effect
+    @reactive.event(raw_data,ready_to_validate)
+    def validate_data():
+        if ready_to_validate.get():
+            print('Running validation')
+            data = raw_data.get()
+            if data is not None:
+                res = Validator(data)
+                validated_data.set(res.data)
+                validation_status.set(True)  # Set validation status to True
+                print('Validation has been set true')
+            else:
+                validation_status.set(False)
+
+    @reactive.Effect
+    @reactive.event(validation_status)
+    def set_util():
+        if validation_status.get():
+            print('setting util')
+            data = validated_data.get()
+
+            print('the data',data)
+            values = value_set.get()
+            country = input.country() or default_country
+            if data is not None and values is not None and country:
+                res = Eq5dvalue(data, values, country).calculate_util()
+                data_with_util.set(res)
+                util_added.set(True)
+    
+    
+    @reactive.Effect
+    @reactive.event(util_added,input.group_col)
+    def process_data():
+        print('Trying to process data')
+        if util_added.get():  # Check if validation was successful
+            data = data_with_util.get()
+            values = value_set.get()
+
+            country = input.country() or default_country
+            group_c = input.group_col()
+            groups.set(Processor(data,group_c).group_list)
+            groups_list = groups.get()
+
+            if data is not None and values is not None and country and groups_list==['NO_GROUP_CHOSEN']:
+                processed = Processor(data,group_col='None')
+                groups.set(processed.group_list)
+                data_tables.set({
+                    'simple_desc':processed.simple_desc(),
+                    'binary_desc':processed.binary_desc(),
+                    't10_index': processed.top_frequency(),
+                    'data_LFS': processed.level_frequency_score(),
+                    'health_state_density_curve':processed.health_state_density_curve(),
+                })
+
+            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)>1:
+                df_type = input.dataframe_select()
+                res = {}
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency'])
+                groups_wanted = grouped_dfs.get()
+                all_dfs = Processor(data,group_c).siloed_data
+
+                res = {
+                    group_name: {
+                        groups_wanted[n]: df
+                for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])
+            }
+            for group_name, group_data in all_dfs.items()
+        }           
+                
+                hsdc_df = Processor(data,group_c).health_state_density_curve()
+                for group_name, group_data in res.items():
+                    res[group_name]['health_state_density_curve'] = hsdc_df
+                
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve'])
+                group_data_tables.set(res)
+            
+            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)==2:
+                df_type = input.dataframe_select()
+                final = group_data_tables.get()
+                this_data = data_with_util.get().reset_index()
+                px_df = Processor(this_data, group_c).paretian()
+
+                for group_name, group_data in all_dfs.items():
+                    final[group_name]['paretian'] = px_df
+
+                group_data_tables.set(final)
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian'])
+
 
     @output
     @render.ui
     def group_options_ui():
-        return ui.input_radio_buttons("group_options", "Select Group to display:", group_list.get())
+        return ui.input_radio_buttons("group_options", "Select Group to display:", groups.get())
 
     @output
     @render.ui
@@ -116,96 +211,6 @@ def server(input, output, session):
     @render.ui
     def group_col_ui_page3():
         return ui.input_select("group_col_page3", "Select Group Column:", choices=column_choices.get())
-    
-    @reactive.Effect
-    @reactive.event(raw_data, input.group_col)
-    def validate_data():
-        if ready_to_validate.get():
-            print('Running validation')
-            data = raw_data.get()
-            group_c = input.group_col()
-
-            if data is not None:
-                res = Validator(data, group_col=group_c)
-                print(res.group_list, 'The group list')
-                group_list.set(res.group_list)
-                validated_data.set(res.data)
-                validation_status.set(True)  # Set validation status to True
-                print('Validation has been set true')
-            else:
-                validation_status.set(False)
-
-    @reactive.Effect
-    def set_util():
-        data = validated_data.get()
-        values = value_set.get()
-        country = input.country() or default_country
-        if data is not None and values is not None and country:
-            res = Eq5dvalue(data, values, country).calculate_util()
-            processed_data.set(res)
-        else:
-            processed_data.set(pd.DataFrame({"Message": ["Need to input data and VS first"]}))
-
-
-    @reactive.Effect
-    @reactive.event(processed_data, validation_status,input.group_col)
-    def process_data():
-        print('Trying to process data')
-        if validation_status.get():  # Check if validation was successful
-            data = processed_data.get()
-            values = value_set.get()
-            groups = group_list.get()
-
-            country = input.country() or default_country
-            group_c = input.group_col()
-
-            if data is not None and values is not None and country and group_c=='None':
-                print('Trying, group list is', groups, 'group col is',group_c)
-                processed = Processor(data,group_list=['NO_GROUP_CHOSEN'])
-                data_tables.set({
-                    'simple_desc':processed.simple_desc(),
-                    'binary_desc':processed.binary_desc(),
-                    't10_index': processed.top_frequency(),
-                    'data_LFS': processed.level_frequency_score(),
-                    'health_state_density_curve':processed.health_state_density_curve(),
-                })
-
-            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups)>1:
-                df_type = input.dataframe_select()
-                res = {}
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency'])
-                groups_wanted = grouped_dfs.get()
-                all_dfs = Processor(data,groups,group_c).siloed_data
-
-                res = {
-                    group_name: {
-                        groups_wanted[n]: df
-                for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])
-            }
-            for group_name, group_data in all_dfs.items()
-        }           
-                
-                hsdc_df = Processor(data,groups,group_c).health_state_density_curve()
-                for group_name, group_data in res.items():
-                    res[group_name]['health_state_density_curve'] = hsdc_df
-                
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve'])
-                group_data_tables.set(res)
-            
-            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups)==2:
-                final = group_data_tables.get()
-                this_data = processed_data.get().reset_index()
-                px_df = Processor(this_data, groups, group_c).paretian()
-
-                for group_name, group_data in all_dfs.items():
-                    final[group_name]['paretian'] = px_df
-
-                group_data_tables.set(final)
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian'])
-
-
-    
-
 
     @output
     @render.ui
@@ -237,11 +242,11 @@ def server(input, output, session):
     @output
     @render.text
     def print_grouplist():
-        out = group_list.get()
+        out = groups.get()
         return f"Group list for selected group: {out}"
 
     @reactive.Effect
-    @reactive.event(data_tables,input.group_col, group_list, grouped_dfs)
+    @reactive.event(data_tables,input.group_col, grouped_dfs)
     def update_dataframe_select():
         reactive.invalidate_later(0.1)
         if input.group_col()=='None':
@@ -252,16 +257,31 @@ def server(input, output, session):
 
     @output
     @render.table
+    @reactive.event(raw_data)
     def rawdata_display():
         df = raw_data.get()
         if df is not None:
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(10)
+            return pd.DataFrame(fixed_index).head(2)
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
-        
+    
+
+    @output
+    @render.table
+    @reactive.event(data_with_util)
+    def validated_data_display():
+        df = data_with_util.get()
+        if df is not None:
+            old_index = df.index.name if df.index.name else 'index'
+            fixed_index = df.reset_index()
+            fixed_index.rename(columns={'index': old_index}, inplace=True)
+            return pd.DataFrame(fixed_index).head(100)
+        else:
+            return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
+
 
     @output
     @render.table
@@ -285,11 +305,11 @@ def server(input, output, session):
     def desc_plot():
 
         selected_df = input.dataframe_select()
-        data = processed_data.get()
-        groups = group_list.get()
+        data = data_with_util.get()
+        grouplist = groups.get()
         group_c = input.group_col()
         
-        if groups == ['NO_GROUP_CHOSEN']:
+        if grouplist == ['NO_GROUP_CHOSEN']:
 
             dfs = data_tables.get()
             data = dfs[selected_df]
@@ -320,7 +340,7 @@ def server(input, output, session):
             
             if selected_df=='simple_desc':
                 grouped_pct = {}
-                siloed = Processor(validated_data.get(),groups,group_c).siloed_data
+                siloed = Processor(validated_data.get(),group_c).siloed_data
 
                 for key, item in siloed.items():
                     grouped_pct[key] = Processor(item).get_percent()
@@ -341,7 +361,7 @@ def server(input, output, session):
                 fig = vis.histogram_by_group()
 
             elif selected_df == 'health_state_density_curve':
-                vis = Visualizer(group_data_tables.get()[groups[0]]['health_state_density_curve'])
+                vis = Visualizer(group_data_tables.get()[grouplist[0]]['health_state_density_curve'])
                 fig = vis.health_state_density_curve()
 
 

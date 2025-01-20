@@ -7,27 +7,33 @@ import seaborn as sns
 
 class Processor:
 
-    def __init__(self, data, group_list=[],group_col='None'):
+    def __init__(self, data,group_col='None'):
+    
 
         #The processor can accept two types of data, one type is the entire dataset. The other is a dataset containing a single group, for example only pre-op patients. 
         self.df = pd.DataFrame(data)
         self.group_col = group_col
-        self.group_list = group_list
         if group_col == 'AGE':
             #change age to groups
             pass
 
-
         #If there are multiple groups detected, split the data into dataframes with one group each
-        if len(group_list)>1:
-            self.siloed_data = {group: data for group, data in self.df.groupby(self.group_col)}
+
         
         else:
         #If the dataset passed is a single group, do some modification to assist for later single-group analysis.
         #Note if original data passed is a dictionary,
             self.trim_df = self.df[['MO','SC','UA','PD','AD']]
             self.sum_df = self.trim_df.apply(lambda c: c.value_counts().reindex(range(1,6), fill_value = 0)).T
-    
+
+        if self.group_col == 'None':
+            self.group_list = ['NO_GROUP_CHOSEN']
+        else:
+            self.group_list = self.df[self.group_col].unique().tolist()
+
+        if len(self.group_list)>1:
+            self.siloed_data = {group: data for group, data in self.df.groupby(self.group_col)}
+
     def cont_to_cat(self):
         #change age to agegroup
         df = self.df

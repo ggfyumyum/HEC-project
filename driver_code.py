@@ -35,27 +35,29 @@ if filter:
     raw_data = Validator.apply_filter(raw_data,group='GENDER',subset='M')
 
 #run the raw data through the validator
-validated_data = Validator(raw_data,group_col)
+validated_data = Validator(raw_data)
 
 data = validated_data.data
-group_list = validated_data.group_list
+
 
 #append the utility scores and ranked calculations to the original data
 data_with_util = Eq5dvalue(data, value_set,country).calculate_util()
 
 #create a dictionary with each group having its own dataframe, store it in siloed_data
-siloed_data = Processor(data,group_list,group_col).siloed_data
+siloed_data = Processor(data,group_col).siloed_data
+
+group_list = Processor(data,group_col).group_list
 
 #******************************************* DATA ANALYSIS *****************************************************
 #create some new DFs which can be used for plotting or printed directly for analysis
 
-t10_index = Processor(data,group_list,group_col).top_frequency()
-ts_delta_binary = Processor(data,group_list,group_col).ts_binary()
-paretian = Processor(data,group_list,group_col).paretian()
-data_LSS = Processor(data,group_list,group_col).level_frequency_score()
-avg_utility = Processor(data,group_list,group_col).ts_utility()
-avg_eqvas = Processor(data,group_list,group_col).ts_eqvas()
-hdsc = Processor(data,group_list,group_col).health_state_density_curve()
+t10_index = Processor(data,group_col).top_frequency()
+ts_delta_binary = Processor(data,group_col).ts_binary()
+paretian = Processor(data,group_col).paretian()
+data_LSS = Processor(data,group_col).level_frequency_score()
+avg_utility = Processor(data,group_col).ts_utility()
+avg_eqvas = Processor(data,group_col).ts_eqvas()
+hdsc = Processor(data,group_col).health_state_density_curve()
 
 
 print(paretian)
@@ -93,7 +95,7 @@ Visualizer(grouped_pct).histogram_by_group()
 
 #health profile grid, requires the paretian dataframe
 if len(group_list)==2:
-    Visualizer(Processor(data,group_list,group_col).hpg(paretian,group_list[0],group_list[1])).hpg()
+    Visualizer(Processor(data,group_col).hpg(paretian,group_list[0],group_list[1])).hpg()
 
 #avg util
 Visualizer(avg_utility).time_series()

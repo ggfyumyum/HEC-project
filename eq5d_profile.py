@@ -24,7 +24,7 @@ class Eq5dvalue:
         #append the utility values to the original data
         self.util_values = []
         for index,row in df.iterrows():
-            key= row['INDEXPROFILE']
+            key= int(row['INDEXPROFILE'])
             self.util_values.append(val.loc[key,country])
         df['UTILITY'] = self.util_values
 
@@ -55,7 +55,7 @@ class Eq5dvalue:
 
         total_ranked_util = []
         for index, row in df.iterrows():
-            key = row['INDEXPROFILE']
+            key = int(row['INDEXPROFILE'])
             total_ranked_util.append(total_util_ranking[key])
         df['TOTAL_RANKED_UTILITY'] = total_ranked_util
 
