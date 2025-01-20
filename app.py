@@ -22,18 +22,20 @@ app_ui = ui.page_fluid(
             ui.h2("Raw data"),
             ui.output_table('rawdata_display'),
             ui.h2("Processed data"),
-            ui.input_action_button("refresh_button", "Refresh Processed Data"),
             ui.output_table("validated_data_display"),
         ),
+
+        
         ui.nav_panel("Data analysis",
             ui.h2("Display tables and plots of data from one or more groups"),
             ui.h2("Select whole analysis to display)"),
+
+            
             ui.output_ui("group_col_ui"),
+
             ui.output_ui("df_ui"),
             ui.output_text('print_grouplist'),
             ui.output_ui("group_options_ui"),
-
-            ui.output_text("hello_text"),
             ui.output_table("show_df1"),
             ui.output_plot("desc_plot")
             
@@ -41,7 +43,12 @@ app_ui = ui.page_fluid(
         ui.nav_panel("Time-series analysis",
                      
             ui.h2("Display table/plots of the change over time with n time intervals"),
+
+            
             ui.output_ui("group_col_ui_page3"),
+            ui.output_text("time_intervals_text"),
+            #ui.output_ui("df_ui2")
+           
 
         ),
     )
@@ -54,20 +61,23 @@ def server(input, output, session):
     raw_data = reactive.Value(None)
     validated_data = reactive.Value(None)  # Reactive value to store validated data
     data_with_util = reactive.Value(None)
-    
+
+    grouped_dfs = reactive.Value([])
     data_tables = reactive.Value({})  # Reactive value to store data tables
     group_data_tables = reactive.Value({})
+    time_series_tables = reactive.value({})
 
     groups = reactive.Value(['NO_GROUP_CHOSEN'])
 
     util_added = reactive.Value(False)
     validation_status = reactive.Value(False)  # Reactive value to track validation status
     ready_to_validate = reactive.Value(False)
+
     column_choices = reactive.Value(['None'])
     df_output_choices = reactive.Value(['No Dataframes Created'])
-    group_options = reactive.Value(['None'])
-    grouped_dfs = reactive.Value([])
+    ts_output_choices = reactive.Value(['No Time series Created'])
 
+    
     # Set default values
     default_country = "NewZealand"
 
@@ -106,7 +116,7 @@ def server(input, output, session):
             columns = data.columns.tolist()
             column_choices.set(['None'] + columns)
             ready_to_validate.set(True)
-            print('ready to validate')
+            print('ready to validate, column choices are',column_choices.get())
 
     @reactive.Effect
     @reactive.event(raw_data,ready_to_validate)
@@ -129,132 +139,14 @@ def server(input, output, session):
             print('setting util')
             data = validated_data.get()
 
-            print('the data',data)
             values = value_set.get()
             country = input.country() or default_country
             if data is not None and values is not None and country:
                 res = Eq5dvalue(data, values, country).calculate_util()
                 data_with_util.set(res)
                 util_added.set(True)
+
     
-    
-    @reactive.Effect
-    @reactive.event(util_added,input.group_col)
-    def process_data():
-        print('Trying to process data')
-        if util_added.get():  # Check if validation was successful
-            data = data_with_util.get()
-            values = value_set.get()
-
-            country = input.country() or default_country
-            group_c = input.group_col()
-            groups.set(Processor(data,group_c).group_list)
-            groups_list = groups.get()
-
-            if data is not None and values is not None and country and groups_list==['NO_GROUP_CHOSEN']:
-                processed = Processor(data,group_col='None')
-                groups.set(processed.group_list)
-                data_tables.set({
-                    'simple_desc':processed.simple_desc(),
-                    'binary_desc':processed.binary_desc(),
-                    't10_index': processed.top_frequency(),
-                    'data_LFS': processed.level_frequency_score(),
-                    'health_state_density_curve':processed.health_state_density_curve(),
-                })
-
-            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)>1:
-                df_type = input.dataframe_select()
-                res = {}
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency'])
-                groups_wanted = grouped_dfs.get()
-                all_dfs = Processor(data,group_c).siloed_data
-
-                res = {
-                    group_name: {
-                        groups_wanted[n]: df
-                for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])
-            }
-            for group_name, group_data in all_dfs.items()
-        }           
-                
-                hsdc_df = Processor(data,group_c).health_state_density_curve()
-                for group_name, group_data in res.items():
-                    res[group_name]['health_state_density_curve'] = hsdc_df
-                
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve'])
-                group_data_tables.set(res)
-            
-            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)==2:
-                df_type = input.dataframe_select()
-                final = group_data_tables.get()
-                this_data = data_with_util.get().reset_index()
-                px_df = Processor(this_data, group_c).paretian()
-
-                for group_name, group_data in all_dfs.items():
-                    final[group_name]['paretian'] = px_df
-
-                group_data_tables.set(final)
-                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian'])
-
-
-    @output
-    @render.ui
-    def group_options_ui():
-        return ui.input_radio_buttons("group_options", "Select Group to display:", groups.get())
-
-    @output
-    @render.ui
-    def group_col_ui():
-        return ui.input_select("group_col", "Group data By:", choices=column_choices.get())
-    
-    @output
-    @render.ui
-    def group_col_ui_page3():
-        return ui.input_select("group_col_page3", "Select Group Column:", choices=column_choices.get())
-
-    @output
-    @render.ui
-    def df_ui():
-        return ui.input_select("dataframe_select", "Select df type:", choices=df_output_choices.get())
-    
-    @output
-    @render.table
-    def show_df1():
-        if input.group_col()=='None' or input.group_col()=='NO_GROUP_CHOSEN':
-            tables = data_tables.get()
-            
-        else:
-            table_list = group_data_tables.get()
-
-            tables = table_list[input.group_options()]
-
-        df = tables[input.dataframe_select()]
-
-        if df is not None:
-
-            old_index = df.index.name if df.index.name else 'index'
-            fixed_index = df.reset_index()
-            fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(10)
-        else:
-            return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
-    
-    @output
-    @render.text
-    def print_grouplist():
-        out = groups.get()
-        return f"Group list for selected group: {out}"
-
-    @reactive.Effect
-    @reactive.event(data_tables,input.group_col, grouped_dfs)
-    def update_dataframe_select():
-        reactive.invalidate_later(0.1)
-        if input.group_col()=='None':
-            df_output_choices.set(list(data_tables.get()))
-        else:
-            df_output_choices.set(grouped_dfs.get())
-        print("Dataframe options updated:", df_output_choices.get())
-
     @output
     @render.table
     @reactive.event(raw_data)
@@ -282,24 +174,148 @@ def server(input, output, session):
         else:
             return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
 
+    @output
+    @render.ui
+    def group_col_ui():
+        return ui.input_select("group_col", "Group data By:", choices=column_choices.get())
+    
+    @reactive.Effect
+    @reactive.event(input.group_col)
+    def print_group_col():
+        group_c = input.group_col()
+        print(f"The group_col has been set to: {group_c}")
+        
+    
+    @reactive.Effect
+    @reactive.event(input.group_col)
+    def process_data():
+        print('Trying to process data')
+        if util_added.get():  # Check if validation was successful
+            data = data_with_util.get()
+            values = value_set.get()
+
+            print(f"Before accessing group_col: {input.group_col()}")
+            group_c = input.group_col()
+            print(f"After accessing group_col: {group_c}")
+
+            country = input.country() or default_country
+
+            groups.set(Processor(data,group_c).group_list)
+
+            groups_list = groups.get()
+            print('groups is ',groups_list)
+
+            if data is not None and values is not None and country and groups_list==['NO_GROUP_CHOSEN']:
+                print("generating whole analysis")
+                processed = Processor(data,group_col='None')
+                groups.set(processed.group_list)
+                data_tables.set({
+                    'simple_desc':processed.simple_desc(),
+                    'binary_desc':processed.binary_desc(),
+                    't10_index': processed.top_frequency(),
+                    'data_LFS': processed.level_frequency_score(),
+                    'health_state_density_curve':processed.health_state_density_curve(),
+                })
+                print("ive updated data_tables",data_tables.get().keys())
+
+            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)>1:
+                res = {}
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency'])
+                groups_wanted = grouped_dfs.get()
+                all_dfs = Processor(data,group_c).siloed_data
+
+                res = {
+                    group_name: {
+                        groups_wanted[n]: df
+                for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])
+            }
+            for group_name, group_data in all_dfs.items()
+        }           
+                
+                hsdc_df = Processor(data,group_c).health_state_density_curve()
+                for group_name, group_data in res.items():
+                    res[group_name]['health_state_density_curve'] = hsdc_df
+                
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve'])
+                group_data_tables.set(res)
+            
+            if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)==2:
+                final = group_data_tables.get()
+                this_data = data_with_util.get().reset_index()
+                px_df = Processor(this_data, group_c).paretian()
+
+                for group_name, group_data in all_dfs.items():
+                    final[group_name]['paretian'] = px_df
+
+                group_data_tables.set(final)
+                grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian'])
+                
+    
 
     @output
-    @render.table
-    def dataframe_output():
-        selected_df = input.dataframe_select()
-        dfs = data_tables.get()
-        data = dfs.get(selected_df, pd.DataFrame({"Message": ["Need to input data and VS first"]}))
-        if data is not None and not data.empty:
-            old_index = data.index.name if data.index.name else 'index'
-            fixed_index = data.reset_index()
-            fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index)
+    @render.ui
+    def df_ui():
+        return ui.input_select("dataframe_select", "Select df type:", choices=df_output_choices.get())
+    
+    @reactive.Effect
+    @reactive.event(input.group_col)
+    def update_dataframe_select():
+        print('updating df select based on gorup col')
+        print('data tables is', data_tables.get(), 'grouped dfs is',grouped_dfs.get())
+
+        if input.group_col()=='None':
+            print('set it to the whole list options')
+            k = data_tables.get()
+            print(k,'jqwehjqe')
+            df_output_choices.set(list(k))
+            print("Dataqweqeqes updated:", df_output_choices.get())
+        else:
+            df_output_choices.set(grouped_dfs.get())
+
+        print("Dataframe options updated:", df_output_choices.get())
 
     @output
     @render.text
-    def hello_text():
-        return input.country() or default_country
+    def print_grouplist():
+        out = groups.get()
+        return f"Group list for selected group: {out}"
     
+    @output
+    @render.ui
+    def group_options_ui():
+        return ui.input_radio_buttons("group_options", "Select Group to display:", groups.get())
+    
+    
+    @output
+    @render.table
+    def show_df1():
+        if input.group_col()=='None' or groups.get()=='NO_GROUP_CHOSEN':
+            tables = data_tables.get()
+            print('tables available')
+            
+        else:
+            table_list = group_data_tables.get()
+            print('a group was inputted, tabled list')
+            tables = table_list[input.group_options()]
+
+        
+        print('looking for the df now')
+
+        df = tables[input.dataframe_select()]
+
+        print('the df i chose to display',df)
+
+        if df is not None:
+            print('now printing df')
+
+            old_index = df.index.name if df.index.name else 'index'
+            fixed_index = df.reset_index()
+            fixed_index.rename(columns={'index': old_index}, inplace=True)
+            return pd.DataFrame(fixed_index).head(10)
+        else:
+            return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
+        
+
     @output
     @render.plot
     def desc_plot():
@@ -367,10 +383,69 @@ def server(input, output, session):
 
         return fig
     
-        
-
+    @output
+    @render.ui
+    def group_col_ui_page3():
+        return ui.input_select("group_col_page3", "Select Column containing time intervals:", choices=column_choices.get())
     
+    @output
+    @render.ui
+    def df_ui2():
+        return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
+    
+              
+    
+    @reactive.Effect
+    @reactive.event(time_series_tables,input.group_col_page3)
+    def update_ts_select():
+        if input.group_col_page3=='None':
+            ts_output_choices.set(['No Choice available'])
+
+
+    @reactive.Effect
+    @reactive.event(util_added,input.group_col_page3)
+    def process_ts_data():
+        print('generating timeseries data')
+        if util_added.get():  # Check if validation was successful
+            data = data_with_util.get()
+            groupcol = input.group_col_page3()
+
+            if data is not None and groupcol!='None':
+
+                processor = Processor(data,groupcol)
+                wanted_ts = ['ts_delta_binary','avg_utility','avg_eqvas']
+                res = {}
+                for n, df in enumerate ( [processor.ts_binary(), processor.ts_utility(), processor.ts_eqvas()]):
+                    res[wanted_ts[n]] = df
+
+                time_series_tables.set(res)
+                ts_output_choices.set(wanted_ts)
+    
+    @output
+    @render.text
+    @reactive.event(input.group_col_page3)
+    def time_intervals_text():
+        group_col = input.group_col_page3()
+        if group_col!='TIME_INTERVAL':
+            return "Invalid time grouping selection"
         
+        if group_col:
+            data = data_with_util.get()
+            if data is not None:
+                time_groups = Processor(data, group_col).group_list
+                return f"Time intervals found in selected column: {time_groups}"
+        return "Invalid time grouping selection"
+
+
+    @output
+    @render.ui
+    def df_ui2():
+        return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
+              
+    
+    
+    
+
 # Create the app
 app = App(app_ui, server)
 
@@ -379,6 +454,17 @@ if __name__ == "__main__":
 
 
 '''
+    @output
+    @render.table
+    def dataframe_output():
+        selected_df = input.dataframe_select()
+        dfs = data_tables.get()
+        data = dfs.get(selected_df, pd.DataFrame({"Message": ["Need to input data and VS first"]}))
+        if data is not None and not data.empty:
+            old_index = data.index.name if data.index.name else 'index'
+            fixed_index = data.reset_index()
+            fixed_index.rename(columns={'index': old_index}, inplace=True)
+            return pd.DataFrame(fixed_index)
 
             if len(groups) == 2:
                 current_data_tables = data_tables.get()

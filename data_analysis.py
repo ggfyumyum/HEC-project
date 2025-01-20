@@ -18,8 +18,6 @@ class Processor:
             pass
 
         #If there are multiple groups detected, split the data into dataframes with one group each
-
-        
         else:
         #If the dataset passed is a single group, do some modification to assist for later single-group analysis.
         #Note if original data passed is a dictionary,
@@ -155,8 +153,6 @@ class Processor:
         paretian_df.to_csv('xyz.csv')
 
         hpg_df = paretian_df
-
-        print(hpg_df)
 
         return hpg_df
     

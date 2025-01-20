@@ -49,8 +49,6 @@ class Eq5dvalue:
         total_ranking_df.sort_values(by='UTILITY', ascending=False, inplace=True)
         total_ranking_df.reset_index(drop=True, inplace=True)
 
-        print(total_ranking_df)
-
         total_util_ranking = {row['INDEX']: index + 1 for index, row in total_ranking_df.iterrows()}
 
         total_ranked_util = []
