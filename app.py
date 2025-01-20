@@ -23,6 +23,11 @@ app_ui = ui.page_fluid(
             ui.output_table('rawdata_display'),
             ui.h2("Processed data"),
             ui.output_table("validated_data_display"),
+
+            ui.output_ui('filter_col_ui'),
+            ui.output_ui("filter_values_ui"),
+            ui.output_table("filtered_data_display")
+            
         ),
 
         
@@ -60,6 +65,7 @@ def server(input, output, session):
     raw_data = reactive.Value(None)
     validated_data = reactive.Value(None)  # Reactive value to store validated data
     data_with_util = reactive.Value(None)
+    filtered_data = reactive.Value(None)
 
     grouped_dfs = reactive.Value([])
     data_tables = reactive.Value({})  # Reactive value to store data tables
@@ -71,14 +77,67 @@ def server(input, output, session):
     util_added = reactive.Value(False)
     validation_status = reactive.Value(False)  # Reactive value to track validation status
     ready_to_validate = reactive.Value(False)
+    filter_checked = reactive.Value(False)
 
     column_choices = reactive.Value(['None'])
     df_output_choices = reactive.Value(['No Dataframes Created'])
     ts_output_choices = reactive.Value(['No Time series Created'])
 
-    
+    filter_values = reactive.Value([])
+
+
     # Set default values
     default_country = "NewZealand"
+
+    @output
+    @render.ui
+    def filter_col_ui():
+        return ui.input_select("filter_column", "Select column to filter by:", choices=column_choices.get()),
+        
+    @output
+    @render.ui
+    def filter_values_ui():
+        column = input.filter_column()
+        if column and column != 'None':
+            unique_values = filter_values.get()
+            return ui.input_checkbox_group("filter_values", f"Filter by {column}:", choices=unique_values)
+        return ui.div()
+    
+    @reactive.Effect
+    @reactive.event(input.filter_column)
+    def update_filter_values():
+        column = input.filter_column()
+        if column and column != 'None':
+            unique_values = data_with_util.get()[column].unique().tolist()
+            filter_values.set(unique_values)
+        else:
+            filter_values.set([])
+
+    @reactive.Effect
+    @reactive.event(input.filter_values)
+    def apply_filter():
+        column = input.filter_column()
+        value = input.filter_values()
+        if column and value:
+            old_data = data_with_util.get()
+            print('value',value)
+            new_data = old_data[old_data[column].isin(value)]
+            print(new_data)
+            filtered_data.set(new_data)
+            filter_checked.set(True)
+        elif column=='None':
+            filtered_data.set(data_with_util.get())
+            filter_checked.set(True)
+
+    @output
+    @render.table
+    def filtered_data_display():
+        df = filtered_data.get()
+        if df is not None:
+            return pd.DataFrame(df).head(100)
+        else:
+            return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
+
 
     @reactive.Effect
     @reactive.event(input.raw_input)
@@ -155,7 +214,7 @@ def server(input, output, session):
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(2)
+            return pd.DataFrame(fixed_index).head(10)
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
     
@@ -166,10 +225,7 @@ def server(input, output, session):
     def validated_data_display():
         df = data_with_util.get()
         if df is not None:
-            old_index = df.index.name if df.index.name else 'index'
-            fixed_index = df.reset_index()
-            fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(100)
+            return pd.DataFrame(df).head(5)
         else:
             return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
 
@@ -295,6 +351,7 @@ def server(input, output, session):
     @render.table
     def show_df1():
         if input.group_col()=='None' or groups.get()=='NO_GROUP_CHOSEN':
+            print('fetching tables from big list',data_tables.get())
             tables = data_tables.get()
         
         else:
@@ -331,7 +388,8 @@ def server(input, output, session):
             print('created vis',vis)
 
             if selected_df == 'simple_desc':
-                processed = Processor(data)
+                print('creating simpledesc')
+                processed = Processor(data_with_util.get())
                 vis = Visualizer(processed.get_percent())
                 fig = vis.histogram()
 
@@ -498,3 +556,11 @@ app = App(app_ui, server)
 
 if __name__ == "__main__":
     app.run()
+
+
+
+'''
+            old_index = df.index.name if df.index.name else 'index'
+            fixed_index = df.reset_index()
+            fixed_index.rename(columns={'index': old_index}, inplace=True)
+'''

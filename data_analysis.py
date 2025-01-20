@@ -12,6 +12,7 @@ class Processor:
 
         #The processor can accept two types of data, one type is the entire dataset. The other is a dataset containing a single group, for example only pre-op patients. 
         self.df = pd.DataFrame(data)
+        print('the incoming data',self.df)
         self.group_col = group_col
         if group_col == 'AGE':
             #change age to groups

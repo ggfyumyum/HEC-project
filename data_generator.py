@@ -3,7 +3,7 @@ import random
 
 # Parameters
 num = 100  # Number of patients
-time_intervals = 2  # Number of time intervals
+time_intervals = 4  # Number of time intervals
 
 # Time intervals
 l = ['Preop', 'Postop', 'Future']
