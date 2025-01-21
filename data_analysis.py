@@ -80,29 +80,40 @@ class Processor:
             pct_res[group] = this_group_pct
         
         #df1 output = %
-        df1 = pd.DataFrame(pct_res).T
+        df1 = pd.DataFrame(pct_res).T.reset_index()
 
         #df2 output = n
-        df2 = pd.DataFrame(num_res).T
+        df2 = pd.DataFrame(num_res).T.reset_index()
 
-        return df2
+        return df1
        
     def paretian(self):
         #outputs a trimmed df showing the paretian classification of group1 vs group2 index profile.
+        
         try:
             if len(self.group_list)!=2:
                 raise ValueError('cant create paretian df if group count!=2')
-        
+            
             group_1 = self.group_list[0]
             group_2 = self.group_list[1]
-
+            
             df1 = self.siloed_data[group_1]
             df2 = self.siloed_data[group_2]
 
+            print('creating paretian class with df', df1, df2)
+            
+            if set(df1['UID']) != set(df2['UID']):
+
+                raise ValueError('invalid grouping selection for comparison')
+
             df = pd.merge(df1,df2,on=['UID'])
+
+
 
             df[group_1] = df['INDEXPROFILE_x']
             df[group_2] = df['INDEXPROFILE_y']
+
+            print('the merged df',df)
 
             df = df[['UID',group_1,group_2]]
             df.set_index(['UID'],inplace=True)

@@ -12,8 +12,18 @@ class Visualizer:
         df = self.data
         df.set_index(df.columns[0], inplace=True)
         fig, ax = plt.subplots()
-        sns.lineplot(x=df.index, y=df.columns[0], data=df, ax=ax)
-        ax.set(xlabel=df.index.name, ylabel=df.columns[0], title=f"Time Series of {df.columns[0]} versus group")
+
+        if df.shape[1] == 1:
+            sns.lineplot(x=df.index, y=df.columns[0], data=df, ax=ax)
+            ax.set(xlabel=df.index.name, ylabel=df.columns[0], title=f"Time Series of {df.columns[0]} versus group")
+
+        else:
+            for col in df.columns:
+                sns.lineplot(x=df.index, y=col, data=df, ax=ax, label=col)
+            ax.set(xlabel=df.index.name, ylabel='Values', title="Time Series of Multiple Columns")
+            ax.legend(title='Columns')
+
+        print('the df',df)
         return fig
     
     def hpg(self):

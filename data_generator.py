@@ -2,8 +2,8 @@ import pandas as p_d
 import random
 
 # Parameters
-num = 100  # Number of patients
-time_intervals = 4  # Number of time intervals
+num = 10  # Number of patients
+time_intervals = 5  # Number of time intervals
 
 # Time intervals
 l = ['Preop', 'Postop', 'Future']

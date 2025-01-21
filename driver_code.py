@@ -13,7 +13,7 @@ from eq5d_decrement_processing import Decrement_processing
 print('RUNNING')
 
 #Required raw inputs
-raw_data = pd.read_csv('knee_data.csv')
+raw_data = pd.read_csv('fake_data.csv')
 decrement_table = pd.read_excel('VS_decrements.xlsx')
 multiple_groups = True
 group_col = 'TIME_INTERVAL'
