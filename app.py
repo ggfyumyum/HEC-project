@@ -17,7 +17,7 @@ app_ui = ui.page_fluid(
     ui.navset_tab(
         ui.nav_panel("Raw Data Input",
             ui.h2("Simple Shiny App"),
-            ui.input_text("country", "Enter country:", ""),
+            ui.output_ui("country_select_ui"),
             ui.input_file("raw_input", "Upload raw data to be analysed"),
             ui.input_file("valueset_input", "Upload valueset"),
             ui.h2("Raw data"),
@@ -65,9 +65,14 @@ app_ui = ui.page_fluid(
     )
 )
 # Define the server logic
+default_valueset = pd.read_csv('valueset_data.csv')
+default_country = "NewZealand"
+
 def server(input, output, session):
 
-    value_set = reactive.Value(pd.read_csv('valueset_data.csv'))
+    value_set = reactive.Value(default_valueset)
+    country_choice = reactive.Value(default_valueset.columns.tolist()[1:])
+    country_chosen = reactive.Value(False)
 
     raw_data = reactive.Value(None)
     validated_data = reactive.Value(None)  # Reactive value to store validated data
@@ -88,7 +93,6 @@ def server(input, output, session):
     valid_time_groups = reactive.Value(['TIME_INTERVAL','TIMESTAMP','TIME']) 
     
 
-
     util_added = reactive.Value(False)
     validation_status = reactive.Value(False)  # Reactive value to track validation status
     ready_to_validate = reactive.Value(False)
@@ -103,7 +107,12 @@ def server(input, output, session):
 
 
     # Set default values
-    default_country = "NewZealand"
+    
+
+    @output
+    @render.ui
+    def country_select_ui():
+        return ui.input_select("country", "Select country:", choices=country_choice.get(),selected=default_country)
 
     @output
     @render.ui
@@ -180,7 +189,7 @@ def server(input, output, session):
     @reactive.event(input.filter_values)
     def apply_filter():
 
-        print('change detected in filter values selected, applying filter')
+        print('change detected in filter values detected, applying filter')
 
         column = input.filter_column()
         value = input.filter_values()
@@ -209,17 +218,15 @@ def server(input, output, session):
 
     @output
     @render.table
-    @reactive.event(input.filter_values)
+    @reactive.event(input.filter_values,filter_applied,filter_options)
     def filtered_data_display():
         df = filtered_data.get()
-        
+
         if df is not None:
             df = df.sort_values(by='UID')
             return pd.DataFrame(df).head(10)
         if df is None or input.filter_values()==() or filter_options.get()==[]:
             return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
-
-        
             
     @reactive.Effect
     @reactive.event(input.raw_input)
@@ -246,6 +253,9 @@ def server(input, output, session):
                 value_set.set(pd.read_csv(file_path))
             elif file_path.endswith('.xlsx'):
                 value_set.set(pd.read_excel(file_path))
+            print(value_set.get().columns.tolist(),'the countrylist')
+            country_choice.set(value_set.get().columns.tolist()[1:])
+        print("Value set loaded:", value_set.get())  # Debugging statement
                 
     @reactive.Effect
     @reactive.event(raw_data,input.country)
@@ -273,9 +283,17 @@ def server(input, output, session):
                 validation_status.set(False)
 
     @reactive.Effect
+    @reactive.event(input.country)
+    def check_country():
+        if input.country()!='None':
+            country_chosen.set(True)
+        else:
+            return
+
+    @reactive.Effect
     @reactive.event(validation_status,input.country)
     def set_util():
-        if validation_status.get():
+        if validation_status.get() and country_chosen.get():
             print('setting util')
             data = validated_data.get()
 
