@@ -200,7 +200,12 @@ class Processor:
     
     def ts_eqvas(self):
         df = self.df
+        print('origin df',df)
         avg_eqvas = df.groupby(self.group_col)['EQVAS'].mean().reset_index()
+
+        print('avg eqvas',avg_eqvas)
+
+
         avg_eqvas.columns = [self.group_col,'average_EQVAS_score']
 
         return avg_eqvas

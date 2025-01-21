@@ -1,9 +1,9 @@
-import pandas as p_d
 import random
+import pandas as pn
 
 # Parameters
-num = 10  # Number of patients
-time_intervals = 5  # Number of time intervals
+num = 100  # Number of patients
+time_intervals = 4  # Number of time intervals
 
 # Time intervals
 l = ['Preop', 'Postop', 'Future']
@@ -19,27 +19,25 @@ gender_assignment = ['M', 'F']
 UID = [i for i in range(1, (num + 1))]
 
 # Dictionary to store patient data
-d1 = {}
-for patient in UID:
-    d1[patient] = []
+d1 = {uid: [] for uid in UID}
 
-# Generate random gender, age, and EQVAS for each UID
+# Generate random gender and age for each UID
 patient_info = {}
 for patient in UID:
     gender = gender_assignment[random.randint(0, 1)]
     age = random.randint(1, 100)
-    eqvas = random.randint(1, 100)
-    patient_info[patient] = [gender, age, eqvas]
+    patient_info[patient] = [gender, age]
 
-# Generate random MO, SC, UA, PD, AD for each time interval
+# Generate random MO, SC, UA, PD, AD, and EQVAS for each time interval
 for patient in UID:
-    gender, age, eqvas = patient_info[patient]
+    gender, age = patient_info[patient]
     for t in range(time_intervals):
         mo = random.randint(1, 5)
         sc = random.randint(1, 5)
         ua = random.randint(1, 5)
         pd = random.randint(1, 5)
         ad = random.randint(1, 5)
+        eqvas = random.randint(0, 100)  # Generate a new EQVAS for each time interval
         d1[patient].append([intervals[t], age, gender, mo, sc, ua, pd, ad, eqvas])
 
 # Create rows for DataFrame
@@ -52,7 +50,7 @@ for uid, interval in d1.items():
 columns = ["UID", "TIME_INTERVAL", "AGE", "GENDER", "MO", "SC", "UA", "PD", "AD", "EQVAS"]
 
 # Create DataFrame
-df = p_d.DataFrame(rows, columns=columns)
+df = pn.DataFrame(rows, columns=columns)
 df.insert(9, 'INDEXPROFILE', df[["MO", "SC", "UA", "PD", "AD"]].apply(lambda row: ''.join(row.astype(str)), axis=1))
 df.to_csv('fake_data.csv', index=False)
 

@@ -556,17 +556,16 @@ def server(input, output, session):
     def df_ui2():
         return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
-              
-    
     @reactive.Effect
-    @reactive.event(time_series_tables,input.group_col_page3,)
+    @reactive.event(input.group_col_page3,input.country,input.filter_values)
     def update_ts_select():
         if input.group_col_page3=='None':
             ts_output_choices.set(['No Choice available'])
 
+        ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
 
     @reactive.Effect
-    @reactive.event(util_added,input.group_col_page3,input.country,input.add_time_group)
+    @reactive.event(input.group_col_page3,input.add_time_group,filter_applied,filtered_data)
     def process_ts_data():
         print('generating timeseries data')
         if util_added.get():  # Check if validation was successful
@@ -604,16 +603,6 @@ def server(input, output, session):
             if data is not None:
                 time_groups = Processor(data, group_col).group_list
                 return f"Time intervals found in selected column: {time_groups}"
-
-    @output
-    @render.ui
-    def df_ui2():
-        return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
-    
-    @reactive.Effect
-    @reactive.event(input.group_col_page3,input.country)
-    def update_ts_select():
-        ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
     @output
     @render.plot
