@@ -9,6 +9,7 @@ from data_validation import Validator
 from data_analysis import Processor
 from data_vizualisation import Visualizer  # Import the Visualizer class
 from eq5d_profile import Eq5dvalue
+from data_generator import Generator
 from shiny import reactive
 from shiny import App, ui, render
 
@@ -16,52 +17,57 @@ from shiny import App, ui, render
 app_ui = ui.page_fluid(
     ui.navset_tab(
         ui.nav_panel("Raw Data Input",
-            ui.h2("Simple Shiny App"),
-            ui.output_ui("country_select_ui"),
-            ui.input_file("raw_input", "Upload raw data to be analysed"),
-            ui.input_file("valueset_input", "Upload valueset"),
-            ui.h2("Raw data"),
-            ui.output_table('rawdata_display'),
-            ui.h2("Processed data"),
-            ui.output_table("validated_data_display"),
-
-
-            ui.output_ui('filter_col_ui'),
-            ui.output_ui("filter_values_ui"),
-            ui.output_table("filtered_data_display")
-            
+            ui.row(
+                ui.column(4,  # Left third of the page
+                    ui.h2("Shiny app for EQ-5D data analysis"),
+                    ui.output_ui("country_select_ui"),
+                    ui.input_file("valueset_input", "Upload valueset (default valueset already loaded)"),
+                    ui.input_file("raw_input", "Upload raw data to be analysed"),
+                    ui.input_action_button("generate_fake_data", "Click to generate Fake Data with the following parameters:"),
+                    ui.br(),
+                    ui.br(),
+                    ui.row(
+                        ui.column(6, ui.input_select("patient_number", "Number of patients:", choices=[10**i for i in range(1, 11)], selected=10)),
+                        ui.column(6, ui.input_select("time_intervals", "Number of time intervals:", choices=list(range(1, 11)), selected=1))
+                    ),
+                    ui.output_ui('filter_col_ui'),
+                    ui.output_ui("filter_values_ui")
+                ),
+                ui.column(7,  # Right two-thirds of the page
+                    ui.h2("Raw data"),
+                    ui.output_table('rawdata_display'),
+                    ui.h2("Processed data"),
+                    ui.output_table("validated_data_display"),
+                    ui.h2(ui.output_text("filtered_data_heading")),
+                    ui.output_table("filtered_data_display")
+                )
+            )
         ),
-
-        
-        ui.nav_panel("Descriptive analysis",
+        ui.nav_panel("Data analysis",
             ui.h2("Display tables and plots of data from one or more groups"),
-            ui.h2("Select whole analysis to display)"),
-
-            
+            ui.h2("Select whole analysis to display"),
             ui.output_ui("group_col_ui"),
-
             ui.output_ui("df_ui"),
-            ui.output_text('print_grouplist'),
             ui.output_ui("group_options_ui"),
+            ui.output_text("print_grouplist"),
+            ui.output_text("hello_text"),
             ui.output_table("show_df1"),
-            ui.output_plot("desc_plot")
-            
+            ui.output_plot("desc_plot"),
+  # New table area for selected dataframe
         ),
         ui.nav_panel("Time-series analysis",
-                     
             ui.h2("Display table/plots of the change over time with n time intervals"),
+            
             ui.output_ui("group_col_ui_page3"),
-            ui.output_text("time_intervals_text"),
-            ui.output_ui("df_ui2"),
-            ui.output_table("selected_ts_df"),
-            ui.output_plot('time_series_plot'),
-            ui.output_text("time_group_list"),
+            
             ui.input_text("new_time_group", "Add new time group column:", ""),
             ui.input_action_button("add_time_group", "Add Time Group"),
-            
-            
-
-        ),
+            ui.output_text("time_group_list"),
+ 
+            ui.output_ui("df_ui2"),
+            ui.output_plot("time_series_plot"),  # Existing plot area
+            ui.output_table("selected_ts_df")
+        )
     )
 )
 # Define the server logic
@@ -105,9 +111,79 @@ def server(input, output, session):
     filter_options = reactive.value([])
     filter_values = reactive.Value([])
 
+    patient_number = reactive.Value(int(10))
+    time_intervals = reactive.Value(int(1))
+
+    app_initialized = reactive.Value(False)
+    display_ftext = reactive.Value(False)
+    new_text = reactive.Value("Filtered data - choose filter for data")
+
+    ready_to_display_df1=reactive.Value(False)
+
+    @reactive.Effect
+    @reactive.event(raw_data,input.filter_values)
+    def update_rtp_status():
+        print('a change in something')
+        ready_to_process.set(False)
+        ready_to_display_df1.set(False)
+        filter_applied.set(False)
+
+    @output
+    @render.text
+    #@reactive.event(app_initialized,display_ftext,input.filter_column)
+    def filtered_data_heading():
+        print('qwojeoqeqs')
+        return new_text.get()
+        print(input.filter_column.get())
+        if input.filter_column.get()=='None':
+            print('nothing..')
+            return "Filtered data - choose filter for data"
+        
+        print('www')
+        column = input.filter_column.get()
+        time.sleep(1)
+        value = input.filter_values.get()
+        print(value,' value')
+        
+        #value  = input.filter_values.get()
+
+        print('column is',column)
+
+        if column and column != 'None':
+            return f"Filtered data - selection includes {value} members of {column} group "
+        
+        return "Filtered data - choose filter for data"
+    @reactive.effect
+    @reactive.event(display_ftext)
+    def update_filter_heading():
+        if display_ftext:
+            column = input.filter_column.get()
+            value = input.filter_values.get()
+            new_text.set(f"Filtered data - selection includes {display_ftext.get()} members of {column} group ")
+
+
+    @reactive.Effect
+    @reactive.event(input.generate_fake_data)
+    def generate_data():
+        num = int(input.patient_number())
+        time_intervals = int(input.time_intervals())
+        print(num,time_intervals,'params')
+        fake_data = Generator.generate_data(num, time_intervals)
+        print('generated data and sent to raw data')
+        raw_data.set(fake_data)
 
     # Set default values
-    
+    @reactive.Effect
+    @reactive.event(input.patient_number)
+    def update_patient_number():
+        patient_number.set(input.patient_number())
+        print(f"Patient number updated to: {patient_number.get()}")
+
+    @reactive.Effect
+    @reactive.event(input.time_intervals)
+    def update_time_intervals():
+        time_intervals.set(input.time_intervals())
+        print(f"Time intervals updated to: {time_intervals.get()}")
 
     @output
     @render.ui
@@ -117,7 +193,7 @@ def server(input, output, session):
     @output
     @render.ui
     def filter_col_ui():
-        return ui.input_select("filter_column", "Select column to filter by:", choices=column_choices.get()),
+        return ui.input_select("filter_column", "Select column to filter by:", choices=column_choices.get(),selected='None')
 
     
     @output
@@ -183,10 +259,13 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.filter_values)
     def debug_filter_values():
+        
         print('input.filter_values has been updated:', input.filter_values())
+        display_ftext.set(input.filter_values())
+        print('ftext has been set to true')
 
     @reactive.Effect
-    @reactive.event(input.filter_values)
+    @reactive.event(input.filter_values,filter_options)
     def apply_filter():
 
         print('change detected in filter values detected, applying filter')
@@ -216,18 +295,8 @@ def server(input, output, session):
             filter_applied.set(False)
 
 
-    @output
-    @render.table
-    @reactive.event(input.filter_values,filter_applied,filter_options)
-    def filtered_data_display():
-        df = filtered_data.get()
 
-        if df is not None:
-            df = df.sort_values(by='UID')
-            return pd.DataFrame(df).head(10)
-        if df is None or input.filter_values()==() or filter_options.get()==[]:
-            return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
-            
+        
     @reactive.Effect
     @reactive.event(input.raw_input)
     def load_raw_data():
@@ -240,6 +309,7 @@ def server(input, output, session):
                 raw_data.set(pd.read_csv(file_path))
             elif file_path.endswith('.xlsx'):
                 raw_data.set(pd.read_excel(file_path))
+    
 
     @reactive.Effect
     @reactive.event(input.valueset_input)
@@ -258,8 +328,10 @@ def server(input, output, session):
         print("Value set loaded:", value_set.get())  # Debugging statement
                 
     @reactive.Effect
-    @reactive.event(raw_data,input.country)
+    @reactive.event(raw_data)
     def extract_group_col():
+        print("new raw data loaded")
+        ready_to_validate.set(False)
         print('running groupcol extraction')
         data = raw_data.get()
         if data is not None:
@@ -269,11 +341,12 @@ def server(input, output, session):
             print('ready to validate, column choices are',column_choices.get())
 
     @reactive.Effect
-    @reactive.event(raw_data,ready_to_validate,input.country)
+    @reactive.event(ready_to_validate)
     def validate_data():
         if ready_to_validate.get():
             print('Running validation')
             data = raw_data.get()
+            validation_status.set(False)
             if data is not None:
                 res = Validator(data)
                 validated_data.set(res.data)
@@ -291,8 +364,10 @@ def server(input, output, session):
             return
 
     @reactive.Effect
-    @reactive.event(validation_status,input.country)
+    @reactive.event(validation_status)
     def set_util():
+        print('validation status changed, now setting util')
+        util_added.set(False)
         if validation_status.get() and country_chosen.get():
             print('setting util')
             data = validated_data.get()
@@ -302,9 +377,13 @@ def server(input, output, session):
             if data is not None and values is not None and country:
                 res = Eq5dvalue(data, values, country).calculate_util()
                 data_with_util.set(res)
-                print(data_with_util.get(),'ive just set the data with util')
+                print('ive just set the data with util')
                 util_added.set(True)
+                print('util has benadded, ready to process')
                 ready_to_process.set(True)
+            else:
+                print('there was an error, I have not set the util')
+                util_added.set(False)
 
     
     @output
@@ -316,21 +395,42 @@ def server(input, output, session):
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(10)
+            return pd.DataFrame(fixed_index).head(3)
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
     
 
     @output
     @render.table
-    @reactive.event(data_with_util,input.country)
+    @reactive.event(util_added)
     def validated_data_display():
+        print('change in util detected, now dispalying the data with util')
         df = data_with_util.get()
         if df is not None:
             df = df.sort_values(by='UID')
-            return pd.DataFrame(df).head(10)
+            return pd.DataFrame(df).head(5)
         else:
             return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
+        
+        
+    @output
+    @render.table
+    @reactive.event(input.filter_values,filter_applied,filter_options)
+    def filtered_data_display():
+        print('Running filtered_data_display')
+        df = filtered_data.get()
+        
+        if df is None or input.filter_values()==() or filter_options.get()==[]:
+            return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
+    
+        if df is not None:
+            df = df.sort_values(by='UID')
+            print('a filtered table has been found successfully, so ready to process is yes')
+            ready_to_process.set(True)
+            return pd.DataFrame(df).head(3)
+        
+        return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
+        
 
     @output
     @render.ui
@@ -346,16 +446,21 @@ def server(input, output, session):
         
     
     @reactive.Effect
-    @reactive.event(input.group_col,input.country,filtered_data)
+    @reactive.event(input.group_col,ready_to_process)
     def process_data():
         print('Trying to process data')
         print('filter status',filter_applied.get())
+        
+        print('havent processed yet, readyt odis play is set to false')
         if filter_applied.get():
+            print('using filtered data')
             data = filtered_data.get()
         else: 
+            print('no filter, so using data with util')
             data = data_with_util.get()
 
-        if util_added.get() and ready_to_process.get():  # Check if validation was successful
+        if ready_to_process.get():  # Check if validation was successful
+            print('ready to process and util has been added. Now processing')
             values = value_set.get()
 
             print(f"Before accessing group_col: {input.group_col()}")
@@ -425,29 +530,33 @@ def server(input, output, session):
                     group_data_tables.set(final)
                     grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian/health_profile_grid'])
 
-
+            print('looks like processing was sucessful, now setting readyt o display')
+            ready_to_display_df1.set(True)
 
     @output
     @render.ui
+    @reactive.event(df_output_choices)
     def df_ui():
+        print('df_ui is updated')
         return ui.input_select("dataframe_select", "Select df type:", choices=df_output_choices.get())
     
     @reactive.Effect
-    @reactive.event(input.group_col,filter_applied,filtered_data)
+    @reactive.event(input.group_col,filter_applied,raw_data,filtered_data)
     def update_dataframe_select():
         print('updating df select based on gorup col')
-        print('data tables is', data_tables.get(), 'grouped dfs is',grouped_dfs.get())
+        #print('data tables is', data_tables.get(), 'grouped dfs is',grouped_dfs.get())
 
         if input.group_col()=='None' or len(groups.get())==1:
             print('set it to the whole list options')
             k = data_tables.get()
-            print(k,'jqwehjqe')
+            #print(k,'jqwehjqe')
             df_output_choices.set(list(k))
-            print("Dataqweqeqes updated:", df_output_choices.get())
+            print("Df_output_choices has been updated to:", df_output_choices.get())
         else:
             df_output_choices.set(grouped_dfs.get())
 
         print("Dataframe options updated:", df_output_choices.get())
+        ready_to_display_df1.set(True)
 
     @output
     @render.text
@@ -463,11 +572,20 @@ def server(input, output, session):
     
     @output
     @render.table
+    @reactive.event(ready_to_display_df1,input.dataframe_select,input.group_options)
     def show_df1():
-        if input.group_col()=='None' or len(groups.get())==1:
-            print('fetching tables from big list',data_tables.get())
-            tables = data_tables.get()
+        if not ready_to_display_df1.get():
+            print('not ready to display yet!')
+            return
         
+        print('seems ready to display now')
+        if input.dataframe_select()=='No Dataframes Created':
+            print('nothing is created, not ready yet')
+            return
+
+        if input.group_col()=='None' or len(groups.get())==1 or input.group_options.get()=='NO_GROUP_CHOSEN':
+            #print('fetching tables from big list',data_tables.get())
+            tables = data_tables.get()
         else:
             table_list = group_data_tables.get()
   
@@ -480,16 +598,23 @@ def server(input, output, session):
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(5)
+            return pd.DataFrame(fixed_index).head(3)
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
         
 
     @output
     @render.plot
+    @reactive.event(ready_to_display_df1,input.dataframe_select)
     def desc_plot():
-
-        selected_df = input.dataframe_select()
+        if not ready_to_display_df1.get():
+            print('not ready to display yet!')
+            return
+        
+        if input.dataframe_select()=='No Dataframes Created':
+            print('nothing is created, not ready to plotyet')
+            return
+        
 
         if filter_applied.get():
             data = filtered_data.get()
@@ -498,13 +623,13 @@ def server(input, output, session):
 
         grouplist = groups.get()
         group_c = input.group_col()
+        selected_df = input.dataframe_select()
         
         if grouplist == ['NO_GROUP_CHOSEN']:
 
             dfs = data_tables.get()
-            data = dfs[selected_df]
-            vis = Visualizer(data)
-            print('created vis',vis)
+            #print('NO GROUP CHOSEN YET, data tables is ',dfs)
+            print('selectd df is ',selected_df)
 
             if selected_df == 'simple_desc':
                 print('creating simpledesc')
@@ -513,13 +638,14 @@ def server(input, output, session):
                 fig = vis.histogram()
 
             elif selected_df == 'binary_desc':
+                data = dfs['binary_desc']
                 problems_df = data[['% problems']].copy()
                 problems_df['%no problems'] = 100 - problems_df['% problems']
                 vis = Visualizer(problems_df)
                 fig = vis.histogram()
 
             elif selected_df == 'health_state_density_curve':
-                data = data_tables.get()['health_state_density_curve']
+                data = dfs['health_state_density_curve']
                 vis = Visualizer(data)
                 fig = vis.health_state_density_curve()
 
@@ -569,43 +695,49 @@ def server(input, output, session):
     def group_col_ui_page3():
         return ui.input_select("group_col_page3", "Select Column containing time intervals:", choices=column_choices.get())
     
+    
     @output
     @render.ui
+    @reactive.event(ts_output_choices)
     def df_ui2():
+        print('change in ts output choices detected, new ts out put choiuces are ',ts_output_choices.get())
         return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
     @reactive.Effect
-    @reactive.event(input.group_col_page3,input.country,input.filter_values)
-    def update_ts_select():
-        if input.group_col_page3=='None':
-            ts_output_choices.set(['No Choice available'])
-
-        ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
-
-    @reactive.Effect
-    @reactive.event(input.group_col_page3,input.add_time_group,filter_applied,filtered_data)
+    @reactive.event(ready_to_process,input.group_col_page3)
     def process_ts_data():
+        print('actiating ts processor')
+        if not ready_to_process.get():
+            print('not ready to process TS data yet')
+
+        groupcol = input.group_col_page3()
+        valid_ts_columns = valid_time_groups.get()
+        if groupcol not in valid_ts_columns:
+            print('invalid time column selected')
+            print('changing it to zero')
+            ts_output_choices.set(['No Choice available'])
+            return
+
         print('generating timeseries data')
-        if util_added.get():  # Check if validation was successful
-            if filter_applied.get():
-                data = filtered_data.get()
-            else: 
-                data = data_with_util.get()
 
-            groupcol = input.group_col_page3()
-            valid_ts_columns = valid_time_groups.get()
+        if filter_applied.get():
+            data = filtered_data.get()
+        else: 
+            data = data_with_util.get()
 
-            if data is not None and groupcol in valid_ts_columns:
-                processor = Processor(data,groupcol)
-                wanted_ts = ['ts_delta_binary','avg_utility','avg_eqvas']
-                res = {}
-                for n, df in enumerate ( [processor.ts_binary(), processor.ts_utility(), processor.ts_eqvas()]):
-                    res[wanted_ts[n]] = df
+        if data is not None:
+            processor = Processor(data,groupcol)
+            wanted_ts = ['ts_delta_binary','avg_utility','avg_eqvas']
+            res = {}
+            for n, df in enumerate ( [processor.ts_binary(), processor.ts_utility(), processor.ts_eqvas()]):
+                res[wanted_ts[n]] = df
 
-                time_series_tables.set(res)
-                ts_output_choices.set(wanted_ts)
-            else:
-                ts_output_choices.set(['No Choice available'])
+            time_series_tables.set(res)
+            print('im boutt achange it')
+            ts_output_choices.set(wanted_ts)
+
+            
+        print('within process ts data, ts output choiuces has been modified to',ts_output_choices.get())
 
     
     @output
@@ -624,7 +756,9 @@ def server(input, output, session):
     
     @output
     @render.plot
+    @reactive.event(input.ts_select, time_series_tables)
     def time_series_plot():
+        print('running timeseries plot')
         selected_ts = input.ts_select()
         
         if selected_ts == 'No Time series Created':
@@ -638,8 +772,10 @@ def server(input, output, session):
         
         return plt.figure()  # Default empty plot if no data or no matching selection
     
+
     @output
     @render.table
+    @reactive.event(input.ts_select)
     def selected_ts_df():
         selected_ts = input.ts_select()
         
@@ -658,7 +794,7 @@ def server(input, output, session):
             fixed_index = ts_copy.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
 
-            return pd.DataFrame(fixed_index).head(5)
+            return pd.DataFrame(fixed_index).head(3)
         
         return pd.DataFrame({"Message": ["No data available"]})
     

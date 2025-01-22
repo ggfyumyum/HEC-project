@@ -12,7 +12,7 @@ class Processor:
 
         #The processor can accept two types of data, one type is the entire dataset. The other is a dataset containing a single group, for example only pre-op patients. 
         self.df = pd.DataFrame(data)
-        print('the incoming data',self.df)
+        #print('the incoming data',self.df)
         self.group_col = group_col
         if group_col == 'AGE':
             #change age to groups
@@ -200,7 +200,7 @@ class Processor:
     
     def ts_eqvas(self):
         df = self.df
-        print('origin df',df)
+        #print('origin df',df)
         avg_eqvas = df.groupby(self.group_col)['EQVAS'].mean().reset_index()
 
         print('avg eqvas',avg_eqvas)
