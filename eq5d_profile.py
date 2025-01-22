@@ -24,6 +24,7 @@ class Eq5dvalue:
     
         self.data = data
         self.country = country
+  
 
     def calculate_util(self):
         """
@@ -36,7 +37,13 @@ class Eq5dvalue:
             KeyError: If the 'country' is not found in the value set columns.
         """
 
+  
         df = self.data
+
+        if 'index' in df.columns:
+            df = df.drop(columns=['index'])
+
+
 
         if 'INDEXPROFILE' not in df.columns:
             raise KeyError("The data must contain an 'INDEXPROFILE' column.")
