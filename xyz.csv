@@ -1,11 +1,11 @@
-UID,interval3,interval0,Paretian class,preop_ranking,postop_ranking
-9,12121,11445,Mixed/uncategorised,12,1783
-6,11212,11324,Mixed/uncategorised,13,334
-4,14312,52523,Mixed/uncategorised,338,2233
-5,14521,34425,Mixed/uncategorised,966,2468
-8,12542,51412,Mixed/uncategorised,1263,948
-1,32245,43224,Mixed/uncategorised,1901,1359
-10,15523,44531,Mixed/uncategorised,2074,2175
-7,53524,52115,Mixed/uncategorised,2755,1605
-2,35552,42412,Mixed/uncategorised,2967,749
-3,43455,52344,Mixed/uncategorised,3029,2472
+UID,Future,Preop,Paretian class,preop_ranking,postop_ranking
+5,22221,44443,Worse,53,2600
+6,25211,45332,Mixed/uncategorised,427,2053
+10,31414,43121,Mixed/uncategorised,833,318
+3,45121,14231,Mixed/uncategorised,1000,316
+8,42134,13451,Mixed/uncategorised,1140,1353
+4,14153,35143,Mixed/uncategorised,1531,1986
+1,51243,55514,Mixed/uncategorised,1584,2987
+7,43423,11444,Mixed/uncategorised,1600,1275
+2,12544,13352,Mixed/uncategorised,2036,1239
+9,54235,21431,Mixed/uncategorised,2782,266

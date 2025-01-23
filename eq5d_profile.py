@@ -38,6 +38,9 @@ class Eq5dvalue:
 
         df = self.data
 
+        if 'index' in df.columns:
+            df = df.drop(columns=['index'])
+
         if 'INDEXPROFILE' not in df.columns:
             raise KeyError("The data must contain an 'INDEXPROFILE' column.")
         if self.country not in self.value_set.columns:

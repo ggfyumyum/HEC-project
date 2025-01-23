@@ -24,6 +24,7 @@ app_ui = ui.page_fluid(
                     ui.input_file("valueset_input", "Upload valueset (default valueset already loaded)"),
                     ui.input_file("raw_input", "Upload raw data to be analysed"),
                     ui.input_action_button("generate_fake_data", "Click to generate Fake Data with the following parameters:"),
+                    ui.output_ui('fas'),
                     ui.br(),
                     ui.br(),
                     ui.row(
@@ -36,8 +37,8 @@ app_ui = ui.page_fluid(
                 ui.column(7,  # Right two-thirds of the page
                     ui.h2("Raw data"),
                     ui.output_table('rawdata_display'),
-                    ui.h2("Processed data"),
-                    ui.output_table("validated_data_display"),
+                    ui.h2("DATA WITH UTIL"),
+                    ui.output_table("util_data_display"),
                     ui.h2(ui.output_text("filtered_data_heading")),
                     ui.output_table("filtered_data_display")
                 )
@@ -50,7 +51,7 @@ app_ui = ui.page_fluid(
             ui.output_ui("df_ui"),
             ui.output_ui("group_options_ui"),
             ui.output_text("print_grouplist"),
-            ui.output_text("hello_text"),
+            #ui.output_text("hello_text"),
             ui.output_table("show_df1"),
             ui.output_plot("desc_plot"),
   # New table area for selected dataframe
@@ -60,13 +61,13 @@ app_ui = ui.page_fluid(
             
             ui.output_ui("group_col_ui_page3"),
             
-            ui.input_text("new_time_group", "Add new time group column:", ""),
-            ui.input_action_button("add_time_group", "Add Time Group"),
-            ui.output_text("time_group_list"),
+            #ui.input_text("new_time_group", "Add new time group column:", ""),
+            #ui.input_action_button("add_time_group", "Add Time Group"),
+            #ui.output_text("time_group_list"),
  
-            ui.output_ui("df_ui2"),
-            ui.output_plot("time_series_plot"),  # Existing plot area
-            ui.output_table("selected_ts_df")
+            #ui.output_ui("df_ui2"),
+            #ui.output_plot("time_series_plot"),  # Existing plot area
+            #ui.output_table("selected_ts_df")
         )
     )
 )
@@ -80,7 +81,7 @@ def server(input, output, session):
     country_choice = reactive.Value(default_valueset.columns.tolist()[1:])
     country_chosen = reactive.Value(False)
 
-    raw_data = reactive.Value(None)
+    raw_data = reactive.Value(pd.DataFrame())
     validated_data = reactive.Value(None)  # Reactive value to store validated data
     data_with_util = reactive.Value(None)
     filtered_data = reactive.Value(None)
@@ -99,10 +100,6 @@ def server(input, output, session):
     valid_time_groups = reactive.Value(['TIME_INTERVAL','TIMESTAMP','TIME']) 
     
 
-    util_added = reactive.Value(False)
-    validation_status = reactive.Value(False)  # Reactive value to track validation status
-    ready_to_validate = reactive.Value(False)
-    ready_to_process = reactive.Value(False)
 
     column_choices = reactive.Value(['None'])
     df_output_choices = reactive.Value(['No Dataframes Created'])
@@ -114,54 +111,119 @@ def server(input, output, session):
     patient_number = reactive.Value(int(10))
     time_intervals = reactive.Value(int(1))
 
-    app_initialized = reactive.Value(False)
+    app_initialized = reactive.Value(True)
     display_ftext = reactive.Value(False)
     new_text = reactive.Value("Filtered data - choose filter for data")
 
     ready_to_display_df1=reactive.Value(False)
+    ready_to_apply_filter = reactive.Value(False)
 
-    @reactive.Effect
-    @reactive.event(raw_data,input.filter_values)
-    def update_rtp_status():
-        print('a change in something')
-        ready_to_process.set(False)
-        ready_to_display_df1.set(False)
-        filter_applied.set(False)
+    program_status = reactive.Value(None)
 
+    util_added = reactive.Value(False)
+    ready_to_validate = reactive.Value(False)
+    validation_status = reactive.Value(False)  # Reactive value to track validation status
+    ready_to_process = reactive.Value(False)
+
+    show_util = reactive.Value(0)
+    run_filter = reactive.Value(0)
+    show_filter = reactive.Value(0)
+    trigger_process = reactive.Value(0)
+    trigger_df1 = reactive.Value(0)
+    activate_plot1 = reactive.Value(0)
+
+    
+
+    
     @output
     @render.text
-    #@reactive.event(app_initialized,display_ftext,input.filter_column)
-    def filtered_data_heading():
-        print('qwojeoqeqs')
-        return new_text.get()
-        print(input.filter_column.get())
-        if input.filter_column.get()=='None':
-            print('nothing..')
-            return "Filtered data - choose filter for data"
-        
-        print('www')
-        column = input.filter_column.get()
-        time.sleep(1)
-        value = input.filter_values.get()
-        print(value,' value')
-        
-        #value  = input.filter_values.get()
+    @reactive.event(program_status)
+    def fas():
+        print('program status updated',program_status.get())
+        return 'rogram status updated',program_status.get()
 
-        print('column is',column)
+    
+    @reactive.Effect
+    @reactive.event(app_initialized)
+    def set_program_status():
+        program_status.set('INITIAL')
+        print('app has been initialized')
 
-        if column and column != 'None':
-            return f"Filtered data - selection includes {value} members of {column} group "
-        
-        return "Filtered data - choose filter for data"
-    @reactive.effect
-    @reactive.event(display_ftext)
-    def update_filter_heading():
-        if display_ftext:
-            column = input.filter_column.get()
-            value = input.filter_values.get()
-            new_text.set(f"Filtered data - selection includes {display_ftext.get()} members of {column} group ")
+        # DATA_LOADED -> validated -> util added -> filterered/not -> ready to process
+        #each of the later functions first checks ready to process, does absolutely nothing if not
+        #whenever a change happens before ready to process, we need to change status back
 
+    @reactive.Effect
+    @reactive.event(raw_data)
+    def watch_raw_data():
 
+        if not raw_data.get().empty:
+            print('a change in raw data')
+            program_status.set('DATA_LOADED')
+
+    @reactive.Effect
+    @reactive.event(input.country)
+    def watch_country():
+        print('country has been changed to',input.country())
+        if not raw_data.get().empty:
+            program_status.set('VALIDATED')
+        return
+
+    @reactive.Effect
+    @reactive.event(input.raw_input)
+    def load_raw_data():
+        file_info = input.raw_input()
+        if file_info:
+            if isinstance(file_info, list):
+                file_info = file_info[0]  # Take the first file if multiple files are allowed
+            file_path = file_info['datapath']
+            if file_path.endswith('.csv'):
+                raw_data.set(pd.read_csv(file_path))
+            elif file_path.endswith('.xlsx'):
+                raw_data.set(pd.read_excel(file_path))
+    
+    @reactive.Effect
+    @reactive.event(input.valueset_input)
+    def load_value_set():
+        file_info = input.valueset_input()
+        if file_info:
+            if isinstance(file_info, list):
+                file_info = file_info[0]  # Take the first file if multiple files are allowed
+            file_path = file_info['datapath']
+            if file_path.endswith('.csv'):
+                value_set.set(pd.read_csv(file_path))
+            elif file_path.endswith('.xlsx'):
+                value_set.set(pd.read_excel(file_path))
+            print(value_set.get().columns.tolist(),'the countrylist')
+            country_choice.set(value_set.get().columns.tolist()[1:])
+        print("Value set loaded:", value_set.get())  # Debugging statement
+                
+    @reactive.Effect
+    @reactive.event(program_status)
+    def extract_group_col():
+        if program_status.get()=='VALIDATED':
+            print("new raw data loaded")
+            print('running groupcol extraction')
+            data = raw_data.get()
+            if data is not None:
+                columns = data.columns.tolist()
+                column_choices.set(['None'] + columns)
+                program_status.set('EXTRACTED')
+                print('ready to validate, column choices are',column_choices.get())
+
+    @reactive.Effect
+    @reactive.event(program_status)
+    def validate_data():
+        if program_status.get()=='DATA_LOADED':
+            print('Running validation')
+            data = raw_data.get()
+            if data is not None:
+                res = Validator(data)
+                validated_data.set(res.data)
+                program_status.set('VALIDATED')# Set validation status to True
+                print('Validation has been set true')
+
+    
     @reactive.Effect
     @reactive.event(input.generate_fake_data)
     def generate_data():
@@ -189,47 +251,120 @@ def server(input, output, session):
     @render.ui
     def country_select_ui():
         return ui.input_select("country", "Select country:", choices=country_choice.get(),selected=default_country)
+    
+    
+    @output
+    @render.table
+    @reactive.event(program_status)
+    def rawdata_display():
+        if program_status.get() !='INITIAL':
+            df = raw_data.get()
+            if df is not None:
+                old_index = df.index.name if df.index.name else 'index'
+                fixed_index = df.reset_index()
+                fixed_index.rename(columns={'index': old_index}, inplace=True)
+                return pd.DataFrame(fixed_index).head(3)
+        return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
 
+    
+    @reactive.Effect
+    @reactive.event(program_status)
+    def set_util():
+        if program_status.get()=='EXTRACTED':
+            print('validation status is validated, now setting util')
+            data = validated_data.get()
+            values = value_set.get()
+            country = input.country() or default_country
+            if data is not None and values is not None and country:
+                res = Eq5dvalue(data, values, country).calculate_util()
+                data_with_util.set(res)
+                print('ive just set the data with util')
+                program_status.set('UTIL_ADDED')
+            else:
+                print('there was an error, I have not set the util')
+                util_added.set(False)
+    
+   
+    @reactive.Effect
+    @reactive.event(program_status)
+    def trigger_util_display():
+
+        dont_show_util = ['INITIAL','DATA_LOADED','EXTRACTED','VALIDATED']
+        if program_status.get() in dont_show_util:
+            show_util.set(0)
+        elif program_status.get()=='UTIL_ADDED':
+        #if program_status.get()=='UTIL_ADDED':
+            show_util.set(show_util.get()+1)
+            print('util display triggered')
+
+    @output
+    @render.table
+    @reactive.event(show_util)
+    def util_data_display():
+        print('received trigger to show util')
+        if show_util.get()>0:
+            df = data_with_util.get()
+            if df is not None:
+                df = df.sort_values(by='UID')
+                print('util should be displaying, setting program to CHECK_FILTER')
+                program_status.set('CHECK_FILTER')
+                return pd.DataFrame(df).head(5)
+        else:
+            print('not ready to show util yet..')
+        return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
+    
+    
     @output
     @render.ui
     def filter_col_ui():
         return ui.input_select("filter_column", "Select column to filter by:", choices=column_choices.get(),selected='None')
-
+    
+    @reactive.Effect
+    @reactive.event(program_status)
+    def update_filter_col():
+        if program_status.get()=='EXTRACTED':
+            ui.update_select("filter_column", selected='None')
     
     @output
     @render.ui
+    @reactive.event(filter_options)
     def filter_values_ui():
         column = input.filter_column()
-        if column and column != 'None':
-            unique_values = filter_options.get()
-            return ui.div(
-            ui.div(
-                ui.input_checkbox_group("filter_values", f"Filter by {column}:", choices=unique_values),
-                style="display: inline-block; vertical-align: top;"
-            ),
-            ui.div(
-                ui.input_action_button("select_all", "Select All/Deselect All"),
-                style="display: inline-block; margin-left: 10px; vertical-align: top;"
-            )
+        unique_values = filter_options.get()
+        return ui.div(
+        ui.div(
+            ui.input_checkbox_group("filter_values", f"Filter by {column}:", choices=unique_values),
+            style="display: inline-block; vertical-align: top;"
+        ),
+        ui.div(
+            ui.input_action_button("select_all", "Select All/Deselect All"),
+            style="display: inline-block; margin-left: 10px; vertical-align: top;"
         )
-        return ui.div()
+    )
+
     
     @reactive.Effect
     @reactive.event(input.filter_column)
     def update_filter_options():
         print('filter column has changed, im now resetting the filter values')
-        
-        filter_values.set([])
         column = input.filter_column()
 
         if column and column != 'None':
             unique_values = data_with_util.get()[column].unique().tolist()
             filter_options.set(unique_values)
-        else:
+        
+        elif column=='None':
             filter_options.set([])
 
+            print('column is none!, do nothing')
+            print('the current program status',program_status.get())
+            if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+                program_status.set('NOFILTER_APPLIED')
+            #new_text.set("Filtered data - choose filter for data")
+
         print('fi;ter options have been updated to', filter_options.get())
-        
+
+    
     
     @reactive.Effect
     @reactive.event(input.select_all)
@@ -239,7 +374,6 @@ def server(input, output, session):
         if column and column != 'None':
             unique_values = filter_options.get()
             print('choices', unique_values)
-
             current_selection = input.filter_values()
             print('the current selctoin is',current_selection)
         
@@ -248,30 +382,75 @@ def server(input, output, session):
 
             if set(current_selection) == set(unique_values):
                 print('all seelcted, so deselcting all')
-                ui.update_checkbox_group("filter_values", selected=[])
+                #ui.update_checkbox_group("filter_values", selected=[])
+                ui.update_select("filter_values", selected='None')
             else:
                 print('not all selected, so filling all values')
-                ui.update_checkbox_group("filter_values", selected=unique_values)
+                #ui.update_checkbox_group("filter_values", selected=unique_values)
+                ui.update_select("filter_values", selected=unique_values)
         else:
             print('column is none!')
             return
-        
+    
+    
+
+    @output
+    @render.text
+    @reactive.event(new_text)
+    def filtered_data_heading():
+        return new_text.get()
+  
+    @reactive.effect
+    @reactive.event(input.filter_values,input.filter_column)
+    def update_filter_heading():
+        column = input.filter_column.get()
+        value = input.filter_values.get()
+        if column!='None' and value!='None':
+            new_text.set(f"Filtered data - selection includes {value} members of {column} group ")
+        else:
+            new_text.set("Filtered data - choose filter for data")
+
     @reactive.Effect
     @reactive.event(input.filter_values)
     def debug_filter_values():
-        
         print('input.filter_values has been updated:', input.filter_values())
-        display_ftext.set(input.filter_values())
-        print('ftext has been set to true')
+        if input.filter_values()!=():
+            print('found something')
+            run_filter.set(run_filter.get()+1)
+        elif input.filter_values()==():
+            if program_status.get()=='FILTER_APPLIED' or program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+                print('found nothing')
+                if not raw_data.get().empty:
+                    run_filter.set(run_filter.get()+1)
 
     @reactive.Effect
-    @reactive.event(input.filter_values,filter_options)
+    @reactive.event(program_status)
+    def activate_filter_check():
+        if program_status.get()=='CHECK_FILTER':
+            print('sending pulse to check the filter')
+            if not raw_data.get().empty:
+                run_filter.set(run_filter.get()+1)
+    
+    @reactive.Effect
+    @reactive.event(run_filter)
     def apply_filter():
-
-        print('change detected in filter values detected, applying filter')
-
+        print('applying filter')
         column = input.filter_column()
         value = input.filter_values()
+
+        print('ive found what the coluimn and value are', column, value)
+
+        if column == 'None':
+            print('detected that the columns is none')
+            filtered_data.set(data_with_util.get())
+            program_status.set('NOFILTER_APPLIED')
+            return
+
+        if value == ():
+            print('no values selected, so not applying a filter!')
+            filtered_data.set(data_with_util.get())
+            program_status.set('NOFILTER_APPLIED')
+            return
 
         print('values',value,'column is',column)
 
@@ -287,194 +466,98 @@ def server(input, output, session):
             new_data = old_data[old_data[column].isin(value)]
             filtered_data.set(new_data)
             print('filtered data has been created')
-            filter_applied.set(True)
+            program_status.set('FILTER_APPLIED')
 
-        elif column=='None' or value==():
-            print('no filtered datacreated')
-            filtered_data.set(None)
-            filter_applied.set(False)
-
-
-
-        
-    @reactive.Effect
-    @reactive.event(input.raw_input)
-    def load_raw_data():
-        file_info = input.raw_input()
-        if file_info:
-            if isinstance(file_info, list):
-                file_info = file_info[0]  # Take the first file if multiple files are allowed
-            file_path = file_info['datapath']
-            if file_path.endswith('.csv'):
-                raw_data.set(pd.read_csv(file_path))
-            elif file_path.endswith('.xlsx'):
-                raw_data.set(pd.read_excel(file_path))
-    
 
     @reactive.Effect
-    @reactive.event(input.valueset_input)
-    def load_value_set():
-        file_info = input.valueset_input()
-        if file_info:
-            if isinstance(file_info, list):
-                file_info = file_info[0]  # Take the first file if multiple files are allowed
-            file_path = file_info['datapath']
-            if file_path.endswith('.csv'):
-                value_set.set(pd.read_csv(file_path))
-            elif file_path.endswith('.xlsx'):
-                value_set.set(pd.read_excel(file_path))
-            print(value_set.get().columns.tolist(),'the countrylist')
-            country_choice.set(value_set.get().columns.tolist()[1:])
-        print("Value set loaded:", value_set.get())  # Debugging statement
-                
-    @reactive.Effect
-    @reactive.event(raw_data)
-    def extract_group_col():
-        print("new raw data loaded")
-        ready_to_validate.set(False)
-        print('running groupcol extraction')
-        data = raw_data.get()
-        if data is not None:
-            columns = data.columns.tolist()
-            column_choices.set(['None'] + columns)
-            ready_to_validate.set(True)
-            print('ready to validate, column choices are',column_choices.get())
+    @reactive.event(program_status)
+    def trigger_filter_display():
+        dont_show_filter = ['DATA_LOADED','EXTRACTED','VALIDATED','UTIL_ADDED','NOFILTER_APPLIED']
 
-    @reactive.Effect
-    @reactive.event(ready_to_validate)
-    def validate_data():
-        if ready_to_validate.get():
-            print('Running validation')
-            data = raw_data.get()
-            validation_status.set(False)
-            if data is not None:
-                res = Validator(data)
-                validated_data.set(res.data)
-                validation_status.set(True)  # Set validation status to True
-                print('Validation has been set true')
-            else:
-                validation_status.set(False)
+        if program_status.get()=='FILTER_APPLIED':
+            print('im sending show filter trigger')
+            show_filter.set(show_filter.get()+1)
 
-    @reactive.Effect
-    @reactive.event(input.country)
-    def check_country():
-        if input.country()!='None':
-            country_chosen.set(True)
-        else:
+        elif program_status.get() in dont_show_filter:
+            show_filter.set(0)
             return
 
-    @reactive.Effect
-    @reactive.event(validation_status)
-    def set_util():
-        print('validation status changed, now setting util')
-        util_added.set(False)
-        if validation_status.get() and country_chosen.get():
-            print('setting util')
-            data = validated_data.get()
-
-            values = value_set.get()
-            country = input.country() or default_country
-            if data is not None and values is not None and country:
-                res = Eq5dvalue(data, values, country).calculate_util()
-                data_with_util.set(res)
-                print('ive just set the data with util')
-                util_added.set(True)
-                print('util has benadded, ready to process')
-                ready_to_process.set(True)
-            else:
-                print('there was an error, I have not set the util')
-                util_added.set(False)
-
-    
-    @output
-    @render.table
-    @reactive.event(raw_data,input.country)
-    def rawdata_display():
-        df = raw_data.get()
-        if df is not None:
-            old_index = df.index.name if df.index.name else 'index'
-            fixed_index = df.reset_index()
-            fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(3)
-        else:
-            return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
-    
 
     @output
     @render.table
-    @reactive.event(util_added)
-    def validated_data_display():
-        print('change in util detected, now dispalying the data with util')
-        df = data_with_util.get()
-        if df is not None:
-            df = df.sort_values(by='UID')
-            return pd.DataFrame(df).head(5)
-        else:
-            return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
-        
-        
-    @output
-    @render.table
-    @reactive.event(input.filter_values,filter_applied,filter_options)
+    @reactive.event(show_filter)
     def filtered_data_display():
-        print('Running filtered_data_display')
-        df = filtered_data.get()
+        print('i been triggered, show filter is',show_filter.get())
+        if show_filter.get()>0:
+            print('Running filtered_data_display')
+            df = filtered_data.get()
+
+            if df is None:
+                program_status.set('NOFILTER_APPLIED')
+                return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
+            
+            if df is not None:
+                print('THELAST****************************************************************')
+                df = df.sort_values(by='UID')
+                print('a filtered table has been found successfully, now setting program to the next step')
+                program_status.set('RTP')
+                return pd.DataFrame(df).head(5)
         
-        if df is None or input.filter_values()==() or filter_options.get()==[]:
-            return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
-    
-        if df is not None:
-            df = df.sort_values(by='UID')
-            print('a filtered table has been found successfully, so ready to process is yes')
-            ready_to_process.set(True)
-            return pd.DataFrame(df).head(3)
-        
+        if not raw_data.get().empty and show_util.get()>0:
+            print(' i am now ready to process')
+            program_status.set('RTP')
         return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
+    
+    
+    @reactive.Effect
+    @reactive.event(program_status)
+    def advance_prog():
+        if program_status.get()=='NOFILTER_APPLIED':
+            time.sleep(0.2)
+            program_status.set('RTP')
+
+    @reactive.Effect
+    @reactive.event(program_status)
+    def checkpoint_1():
+        if program_status.get()=='RTP':
+            print('ready to advance to next stage')
         
 
     @output
     @render.ui
-    @reactive.event(filter_applied)
+    @reactive.event(column_choices)
     def group_col_ui():
         return ui.input_select("group_col", "Group data By:", choices=column_choices.get())
     
-    @reactive.Effect
-    @reactive.event(input.group_col,input.country)
-    def print_group_col():
-        group_c = input.group_col()
-        print(f"The group_col has been set to: {group_c}")
-        
     
     @reactive.Effect
-    @reactive.event(input.group_col,ready_to_process)
-    def process_data():
-        print('Trying to process data')
-        print('filter status',filter_applied.get())
+    @reactive.event(input.group_col,program_status)
+    def start_process():
+        group_c = input.group_col()
+        print(f"The group_col has been set to: {group_c}")
+        if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+            trigger_process.set(trigger_process.get()+1)
         
-        print('havent processed yet, readyt odis play is set to false')
-        if filter_applied.get():
-            print('using filtered data')
+
+    
+    @reactive.Effect
+    @reactive.event(trigger_process)
+    def process_data():
+        if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+            print('Trying to process data')
             data = filtered_data.get()
-        else: 
-            print('no filter, so using data with util')
-            data = data_with_util.get()
-
-        if ready_to_process.get():  # Check if validation was successful
-            print('ready to process and util has been added. Now processing')
-            values = value_set.get()
-
-            print(f"Before accessing group_col: {input.group_col()}")
+            # Check if validation was successful
+            print('got the data')
             group_c = input.group_col()
-            print(f"After accessing group_col: {group_c}")
-
-            country = input.country() or default_country
-
+            #country = input.country() or default_country
+            #values = value_set.get()
+            print('got group c')
             groups.set(Processor(data,group_c).group_list)
 
             groups_list = groups.get()
             print('groups is ',groups_list)
 
-            if data is not None and values is not None and country and groups_list==['NO_GROUP_CHOSEN'] or len(groups_list)==1:
+            if data is not None and groups_list==['NO_GROUP_CHOSEN'] or len(groups_list)==1:
                 print("generating whole analysis")
                 processed = Processor(data,group_col='None')
                 groups.set(processed.group_list)
@@ -486,21 +569,14 @@ def server(input, output, session):
                     'health_state_density_curve':processed.health_state_density_curve(),
                 })
                 print("ive updated data_tables",data_tables.get().keys())
-
+            
             if data is not None and group_c!='None' and input.dataframe_select()!='None' and len(groups_list)>1:
                 res = {}
                 grouped_dfs.set(['simple_desc','binary_desc','top_frequency'])
                 groups_wanted = grouped_dfs.get()
                 all_dfs = Processor(data,group_c).siloed_data
 
-                res = {
-                    group_name: {
-                        groups_wanted[n]: df
-                for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])
-            }
-            for group_name, group_data in all_dfs.items()
-        }           
-                
+                res = {group_name: {groups_wanted[n]: df for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])} for group_name, group_data in all_dfs.items()}           
                 hsdc_df = Processor(data,group_c).health_state_density_curve()
                 for group_name, group_data in res.items():
                     res[group_name]['health_state_density_curve'] = hsdc_df
@@ -531,8 +607,13 @@ def server(input, output, session):
                     grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian/health_profile_grid'])
 
             print('looks like processing was sucessful, now setting readyt o display')
-            ready_to_display_df1.set(True)
+            
+        else:
+            print('i aint processing, wrong status')
+            return
+        
 
+    
     @output
     @render.ui
     @reactive.event(df_output_choices)
@@ -540,12 +621,12 @@ def server(input, output, session):
         print('df_ui is updated')
         return ui.input_select("dataframe_select", "Select df type:", choices=df_output_choices.get())
     
+    
     @reactive.Effect
-    @reactive.event(input.group_col,filter_applied,raw_data,filtered_data)
+    @reactive.event(trigger_process)
     def update_dataframe_select():
         print('updating df select based on gorup col')
         #print('data tables is', data_tables.get(), 'grouped dfs is',grouped_dfs.get())
-
         if input.group_col()=='None' or len(groups.get())==1:
             print('set it to the whole list options')
             k = data_tables.get()
@@ -556,7 +637,7 @@ def server(input, output, session):
             df_output_choices.set(grouped_dfs.get())
 
         print("Dataframe options updated:", df_output_choices.get())
-        ready_to_display_df1.set(True)
+        program_status.set('READY_TO_DF1')
 
     @output
     @render.text
@@ -564,33 +645,45 @@ def server(input, output, session):
         out = groups.get()
         return f"Group list for selected group: {out}"
     
+    
     @output
     @render.ui
     def group_options_ui():
         return ui.input_radio_buttons("group_options", "Select Group to display:", groups.get())
     
+
+    @reactive.Effect
+    @reactive.event(input.dataframe_select,program_status)
+    def trigger_df():
+        print(f"The df select has been set to: {input.dataframe_select.get()}")
+        if program_status.get()=='READY_TO_DF1':
+            trigger_df1.set(trigger_df1.get()+1)
+            activate_plot1.set(activate_plot1.get()+1)
     
+    @reactive.Effect
+    @reactive.event(program_status,input.group_col)
+    def trigger_plot():
+        print(f"The plot has been set to: {input.dataframe_select.get()}")
+        if program_status.get()=='READY_TO_DF1':
+            activate_plot1.set(activate_plot1.get()+1)
+
     @output
     @render.table
-    @reactive.event(ready_to_display_df1,input.dataframe_select,input.group_options)
+    @reactive.event(trigger_df1)
     def show_df1():
-        if not ready_to_display_df1.get():
-            print('not ready to display yet!')
-            return
-        
         print('seems ready to display now')
+        
         if input.dataframe_select()=='No Dataframes Created':
             print('nothing is created, not ready yet')
             return
 
         if input.group_col()=='None' or len(groups.get())==1 or input.group_options.get()=='NO_GROUP_CHOSEN':
-            #print('fetching tables from big list',data_tables.get())
+            print('fetching tables from big list',data_tables.get())
             tables = data_tables.get()
         else:
             table_list = group_data_tables.get()
   
             tables = table_list[input.group_options()]
-
 
         df = tables[input.dataframe_select()]
 
@@ -602,35 +695,34 @@ def server(input, output, session):
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
         
-
+        
+        
+    
     @output
     @render.plot
-    @reactive.event(ready_to_display_df1,input.dataframe_select)
+    @reactive.event(activate_plot1)
+    
     def desc_plot():
-        if not ready_to_display_df1.get():
-            print('not ready to display yet!')
-            return
+        print('RUNNING PLOTTING FUNCTION*********************')
+        '''
+            #if something
+            #print('not ready to display yet!')
         
+        '''
+
         if input.dataframe_select()=='No Dataframes Created':
             print('nothing is created, not ready to plotyet')
             return
         
-
-        if filter_applied.get():
-            data = filtered_data.get()
-        else: 
-            data = data_with_util.get()
-
+        data = filtered_data.get()
         grouplist = groups.get()
         group_c = input.group_col()
         selected_df = input.dataframe_select()
         
         if grouplist == ['NO_GROUP_CHOSEN']:
-
             dfs = data_tables.get()
             #print('NO GROUP CHOSEN YET, data tables is ',dfs)
             print('selectd df is ',selected_df)
-
             if selected_df == 'simple_desc':
                 print('creating simpledesc')
                 processed = Processor(data)
@@ -654,7 +746,6 @@ def server(input, output, session):
                 pass
 
         else:
-            
             if selected_df=='simple_desc':
                 grouped_pct = {}
                 siloed = Processor(data,group_c).siloed_data
@@ -690,12 +781,14 @@ def server(input, output, session):
 
         return fig
     
+    
     @output
     @render.ui
     def group_col_ui_page3():
         return ui.input_select("group_col_page3", "Select Column containing time intervals:", choices=column_choices.get())
     
     
+    '''
     @output
     @render.ui
     @reactive.event(ts_output_choices)
@@ -812,6 +905,7 @@ def server(input, output, session):
     def time_group_list():
         return f"Valid time groups: {', '.join(valid_time_groups.get())}"
 
+'''
 
 
 # Create the app
