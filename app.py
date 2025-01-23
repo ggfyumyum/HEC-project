@@ -51,23 +51,25 @@ app_ui = ui.page_fluid(
             ui.output_ui("df_ui"),
             ui.output_ui("group_options_ui"),
             ui.output_text("print_grouplist"),
-            #ui.output_text("hello_text"),
             ui.output_table("show_df1"),
             ui.output_plot("desc_plot"),
   # New table area for selected dataframe
         ),
         ui.nav_panel("Time-series analysis",
             ui.h2("Display table/plots of the change over time with n time intervals"),
-            
+            ui.output_text("time_group_list"),
             ui.output_ui("group_col_ui_page3"),
+
+            ui.input_text("new_time_group", "Add new time group column:", ""),
+            ui.input_action_button("add_time_group", "Add Time Group"),
             
-            #ui.input_text("new_time_group", "Add new time group column:", ""),
-            #ui.input_action_button("add_time_group", "Add Time Group"),
-            #ui.output_text("time_group_list"),
- 
-            #ui.output_ui("df_ui2"),
-            #ui.output_plot("time_series_plot"),  # Existing plot area
-            #ui.output_table("selected_ts_df")
+
+            ui.output_text('time_intervals_text'),
+            ui.output_ui("df_ui2"),
+            ui.output_table("selected_ts_df"),
+            ui.output_plot("time_series_plot"),  # Existing plot area
+            
+            
         )
     )
 )
@@ -131,6 +133,7 @@ def server(input, output, session):
     trigger_process = reactive.Value(0)
     trigger_df1 = reactive.Value(0)
     activate_plot1 = reactive.Value(0)
+    trigger_ts_process = reactive.Value(0)
 
     
 
@@ -653,15 +656,14 @@ def server(input, output, session):
     
 
     @reactive.Effect
-    @reactive.event(input.dataframe_select,program_status)
+    @reactive.event(input.dataframe_select,program_status,input.group_options)
     def trigger_df():
         print(f"The df select has been set to: {input.dataframe_select.get()}")
         if program_status.get()=='READY_TO_DF1':
             trigger_df1.set(trigger_df1.get()+1)
-            activate_plot1.set(activate_plot1.get()+1)
-    
+            
     @reactive.Effect
-    @reactive.event(program_status,input.group_col)
+    @reactive.event(program_status,input.group_col,input.dataframe_select)
     def trigger_plot():
         print(f"The plot has been set to: {input.dataframe_select.get()}")
         if program_status.get()=='READY_TO_DF1':
@@ -701,7 +703,6 @@ def server(input, output, session):
     @output
     @render.plot
     @reactive.event(activate_plot1)
-    
     def desc_plot():
         print('RUNNING PLOTTING FUNCTION*********************')
         '''
@@ -788,7 +789,6 @@ def server(input, output, session):
         return ui.input_select("group_col_page3", "Select Column containing time intervals:", choices=column_choices.get())
     
     
-    '''
     @output
     @render.ui
     @reactive.event(ts_output_choices)
@@ -796,12 +796,22 @@ def server(input, output, session):
         print('change in ts output choices detected, new ts out put choiuces are ',ts_output_choices.get())
         return ui.input_select("ts_select", "Select df type:", choices=ts_output_choices.get())
     
+
     @reactive.Effect
-    @reactive.event(ready_to_process,input.group_col_page3)
+    @reactive.event(program_status,input.group_col_page3)
+    def trigger_plot():
+        print(f"The time column: {input.group_col_page3.get()}")
+        if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+            trigger_ts_process.set(trigger_ts_process.get()+1)
+
+
+    @reactive.Effect
+    @reactive.event(trigger_ts_process)
     def process_ts_data():
         print('actiating ts processor')
-        if not ready_to_process.get():
-            print('not ready to process TS data yet')
+        if program_status.get()=='INITIAL':
+            print('holup not yet')
+            return
 
         groupcol = input.group_col_page3()
         valid_ts_columns = valid_time_groups.get()
@@ -810,13 +820,10 @@ def server(input, output, session):
             print('changing it to zero')
             ts_output_choices.set(['No Choice available'])
             return
-
+        
         print('generating timeseries data')
 
-        if filter_applied.get():
-            data = filtered_data.get()
-        else: 
-            data = data_with_util.get()
+        data = filtered_data.get()
 
         if data is not None:
             processor = Processor(data,groupcol)
@@ -828,44 +835,10 @@ def server(input, output, session):
             time_series_tables.set(res)
             print('im boutt achange it')
             ts_output_choices.set(wanted_ts)
-
             
         print('within process ts data, ts output choiuces has been modified to',ts_output_choices.get())
 
     
-    @output
-    @render.text
-    @reactive.event(input.group_col_page3,input.country,input.add_time_group)
-    def time_intervals_text():
-        group_col = input.group_col_page3()
-        if group_col!='TIME_INTERVAL':
-            return "Invalid time grouping selection"
-        
-        if group_col:
-            data = data_with_util.get()
-            if data is not None:
-                time_groups = Processor(data, group_col).group_list
-                return f"Time intervals found in selected column: {time_groups}"
-    
-    @output
-    @render.plot
-    @reactive.event(input.ts_select, time_series_tables)
-    def time_series_plot():
-        print('running timeseries plot')
-        selected_ts = input.ts_select()
-        
-        if selected_ts == 'No Time series Created':
-            return plt.figure()  # Display nothing (empty plot)
-        
-        ts_data = time_series_tables.get().get(selected_ts)
-        if ts_data is not None:
-            vis = Visualizer(ts_data)
-            fig = vis.time_series()  # Assuming Visualizer has a method time_series()
-            return fig
-        
-        return plt.figure()  # Default empty plot if no data or no matching selection
-    
-
     @output
     @render.table
     @reactive.event(input.ts_select)
@@ -891,6 +864,29 @@ def server(input, output, session):
         
         return pd.DataFrame({"Message": ["No data available"]})
     
+    
+    
+    @output
+    @render.plot
+    @reactive.event(input.ts_select, time_series_tables)
+    def time_series_plot():
+        print('running timeseries plot')
+        selected_ts = input.ts_select()
+        
+        if selected_ts == 'No Time series Created':
+            return plt.figure()  # Display nothing (empty plot)
+        
+        ts_data = time_series_tables.get().get(selected_ts)
+        if ts_data is not None:
+            vis = Visualizer(ts_data)
+            fig = vis.time_series()  # Assuming Visualizer has a method time_series()
+            return fig
+        
+        return plt.figure()  # Default empty plot if no data or no matching selection
+    
+
+    
+    
     @reactive.Effect
     @reactive.event(input.add_time_group)
     def add_time_group():
@@ -902,10 +898,25 @@ def server(input, output, session):
 
     @output
     @render.text
+    @reactive.event(input.group_col_page3)
+    def time_intervals_text():
+
+        group_col = input.group_col_page3()
+        if group_col not in valid_time_groups.get():
+            return "Invalid time grouping selection"
+        
+        if group_col:
+            data = filtered_data.get()
+            if data is not None:
+                time_groups = Processor(data, group_col).group_list
+                return f"Time intervals found in selected column: {time_groups}"
+    
+    
+    @output
+    @render.text
     def time_group_list():
         return f"Valid time groups: {', '.join(valid_time_groups.get())}"
 
-'''
 
 
 # Create the app
