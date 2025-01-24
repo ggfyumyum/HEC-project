@@ -45,7 +45,7 @@ class Eq5dvalue:
             raise KeyError("The data must contain an 'INDEXPROFILE' column.")
         if self.country not in self.value_set.columns:
             raise KeyError(f"The value set must contain a column for the country '{self.country}'.")
-    
+
         #append the utility values to the original data
         self.util_values = []
         for index,row in df.iterrows():

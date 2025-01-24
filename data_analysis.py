@@ -2,54 +2,76 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-#the functions in this class accept raw dataframe, and extract some type of statistics/analysis
-#the functions return dataframes which directly show summary statistics, or which can be sent to vizualisation
-
 class Processor:
 
-    def __init__(self, data,group_col='None'):
+    """
+    A class used to process data and extract statistics/analysis.
+    Returns dataframes which directly show summary statistics, or which can be sent to vizualisation
+
+    Attributes:
+    df (pd.DataFrame): The data to be processed.
+    group_column (str): The column used to group the data.
+    group_list (list): List of unique groups in the group_column.
+    sum_df (pd.DataFrame): Summary DataFrame of the trimmed data.
+    siloed_data (dict): Dictionary of dataframes split by group.
+    """
     
 
-        #The processor can accept two types of data, one type is the entire dataset. The other is a dataset containing a single group, for example only pre-op patients. 
+    def __init__(self, data: pd.DataFrame,group_column: str='None'):
+        """
+        Initialize the Processor with data and an optional group column.
+
+        The processor can accept two types of data, one type is the entire dataset. 
+        The other is a dataset containing a single group, for example only pre-op patients. 
+
+        Parameters:
+        data (pd.DataFrame): The data to be processed.
+        group_column (str, optional): The column used to group the data. Defaults to 'None'.
+        """
+        
         self.df = pd.DataFrame(data)
-        #print('the incoming data',self.df)
-        self.group_col = group_col
-        if group_col == 'AGE':
-            #change age to groups
-            pass
+        self.group_column = group_column
 
-        #If there are multiple groups detected, split the data into dataframes with one group each
-        else:
-        #If the dataset passed is a single group, do some modification to assist for later single-group analysis.
-        #Note if original data passed is a dictionary,
-            self.trim_df = self.df[['MO','SC','UA','PD','AD']]
-            self.sum_df = self.trim_df.apply(lambda c: c.value_counts().reindex(range(1,6), fill_value = 0)).T
+        self.trim_df = self.df[['MO','SC','UA','PD','AD']]
+        self.sum_df = self.trim_df.apply(lambda c: c.value_counts().reindex(range(1,6), fill_value = 0)).T
 
-        if self.group_col == 'None':
+        if self.group_column == 'None':
             self.group_list = ['NO_GROUP_CHOSEN']
         else:
-            self.group_list = self.df[self.group_col].unique().tolist()
-
+            group_list = self.df[self.group_column].unique().tolist()
+            self.group_list = [str(x) for x in group_list]
+        #If there are multiple groups detected, split the data into dataframes with one group each
         if len(self.group_list)>1:
-            self.siloed_data = {group: data for group, data in self.df.groupby(self.group_col)}
-
-    def cont_to_cat(self):
-        #change age to agegroup
-        df = self.df
-        return
+            self.siloed_data = {str(group): data for group, data in self.df.groupby(self.group_column)}
     
     def simple_desc(self):
-        #Provide a combined table which shows the n and % of people who responded with each score, for each dimension, for a single group (e.g. pre-op)
+        """
+        Provide a combined table which shows the n and % of people who responded with each score, for each dimension, for a single group (e.g. pre-op).
+
+        Returns:
+        pd.DataFrame: DataFrame containing the summary statistics.
+        """
         df = self.sum_df
         as_percent = df.div(df.sum(axis=0),axis=1).mul(100).round(1)
-        
         simple_profile = df.astype(str)+ "(" + as_percent.astype(str) + "%)"
         return simple_profile
     
     def get_percent(self):
+        """
+        Calculate the percentage of responses for each score, for each dimension. The output of this used to create timeseries.
+
+        Returns:
+        pd.DataFrame: DataFrame containing the percentage of responses.
+        """
         return self.sum_df.div(self.sum_df.sum(axis=0),axis=1).mul(100).round(1)
     
     def binary_desc(self):
+        """
+        Create a table which groups problem (1) vs no problems (2-5), for a single group (e.g. pre-op).
+
+        Returns:
+        pd.DataFrame: DataFrame containing the binary summary statistics.
+        """
         #Create a table which groups problem (1) vs none (2-5), for a single group (e.g. pre-op)
         df = self.sum_df
 
@@ -60,13 +82,18 @@ class Processor:
         return binary_profile
     
     def ts_binary(self):
-        #Accepts a complete dataset, calculate the binary % for each group.
+        """
+        Calculate the binary percentage change for each group over time.
+
+        Returns:
+        Dict[str, pd.DataFrame]: Dictionary containing the binary percentage for each group.
+        """
         df = self.df
         pct_res = {}
         num_res = {}
 
         dimensions = ['MO','SC','UA','PD','AD']
-        for group, group_data in df.groupby(self.group_col):
+        for group, group_data in df.groupby(self.group_column):
             this_group_pct = {}
             this_group_num = {}
             for dimension in dimensions:
@@ -82,14 +109,18 @@ class Processor:
         #df1 output = %
         df1 = pd.DataFrame(pct_res).T.reset_index()
 
-        #df2 output = n
+        #df2 output = n, not used but accessible.
         df2 = pd.DataFrame(num_res).T.reset_index()
 
         return df1
        
     def paretian(self):
-        #outputs a trimmed df showing the paretian classification of group1 vs group2 index profile.
-        
+        """
+        Classify patients into Paretian classes based on their health status.
+
+        Returns:
+        Optional[pd.DataFrame]: DataFrame containing the Paretian classification, or None if an error occurs.
+        """
         try:
             if len(self.group_list)!=2:
                 raise ValueError('cant create paretian df if group count!=2')
@@ -100,42 +131,31 @@ class Processor:
             df1 = self.siloed_data[group_1]
             df2 = self.siloed_data[group_2]
 
-            print('creating paretian class with df', df1, df2)
-            
-            if set(df1['UID']) != set(df2['UID']):
+            #if the different groups do not have matching UIDs, we cant create the paretian DF.
 
+        
+            if set(df1['UID']) != set(df2['UID']):
                 raise ValueError('invalid grouping selection for comparison')
+            
 
             df = pd.merge(df1,df2,on=['UID'])
-
-
-
             df[group_1] = df['INDEXPROFILE_x']
             df[group_2] = df['INDEXPROFILE_y']
-
-            print('the merged df',df)
-
             df = df[['UID',group_1,group_2]]
             df.set_index(['UID'],inplace=True)
 
             def check_paretian(row,group_1,group_2):
-
+                #ideally would add the ability for user to discern which group is baseline, and which is followup.
                 baseline = list(str(row[group_1]))
-                follow = list(str(row[group_2]))
-
-                delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, follow)]
-
+                followup = list(str(row[group_2]))
+                delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, followup)]
                 if all (d==0 for d in delta):
                     return "Same"
-                
                 elif all (d>0 for d in delta):
                     return "Worse"
-                
                 elif all (d<0 for d in delta):
                     return "Better"
-                
                 return "Mixed/uncategorised"
-
             df['Paretian class'] = df.apply(check_paretian,group_1=group_1,group_2=group_2,axis=1)
             return df
         except ValueError as e:
@@ -143,88 +163,117 @@ class Processor:
             return None
     
     def top_frequency (self):
-        #input whole dataframe
-        #output top 10 frequency indexprofiles
+        """
+        Calculate the top 10 frequency index profiles.
+
+        Returns:
+        pd.Series: Series containing the top 10 frequency index profiles.
+        """
         x = pd.Series(self.df['INDEXPROFILE'])
         top_10_index = x.value_counts().head(10)
         return top_10_index
     
-    def hpg(self, paretian_df,group1='Preop',group2='Postop'):
-        #This function requires a special input, paretian classification input and util ranking
-        #outputs a df which can be used to create a health profile grid
-        #adj input parameters
+    def hpg(self, paretian_df: pd.DataFrame ,group1:str = 'Preop',group2:str ='Postop'):
+        """
+        Create a Health Profile Grid (HPG) based on Paretian classification and utility ranking.
 
+        Parameters:
+        paretian_df (pd.DataFrame): DataFrame containing the Paretian classification.
+        group1 (str, optional): The first group for comparison. Defaults to 'Preop'.
+        group2 (str, optional): The second group for comparison. Defaults to 'Postop'.
+
+        Returns:
+        None
+        """
         df = self.df
 
-        df_1 = df[df[self.group_col]==group1]
-        df_2 = df[df[self.group_col]==group2]
+        df_1 = df[df[self.group_column]==group1]
+        df_2 = df[df[self.group_column]==group2]
         
         paretian_df['preop_ranking'] = paretian_df.index.map(df_1.set_index('UID')['TOTAL_RANKED_UTILITY'])
         paretian_df['postop_ranking'] = paretian_df.index.map(df_2.set_index('UID')['TOTAL_RANKED_UTILITY'])
 
-        paretian_df.to_csv('xyz.csv')
-
         hpg_df = paretian_df
-
         return hpg_df
     
     def level_sum_score(self):
+        """
+        Calculate the level sum score for each dimension.
+
+        Returns:
+        pd.DataFrame: DataFrame containing the level sum score for each dimension.
+        """
         dimensions = ['MO','SC','UA','PD','AD']
         self.df['level_sum_score'] = self.df[dimensions].sum(axis=1)
         return self.df
     
     def level_frequency_score(self):
+        """
+        Calculate the level frequency score for each dimension.
+
+        Returns:
+        pd.DataFrame: DataFrame containing the level frequency score for each dimension.
+        """
         dimensions= ['MO','SC','UA','PD','AD']
-
         def calculate_freq(row):
-
             count = [0]*5
             for dim in dimensions:
-                value = row[dim]
+                #print('row',row)
+                value = int(row[dim])
                 if 0<value<6:
                     count[value-1]+=1
-            freq = ''.join(str(d) for d in count)
-
             #keep freq as str to preserve leading zeros
+            freq = ''.join(str(d) for d in count)
             return (freq)
         self.df['level_frequency_score'] = self.df.apply(calculate_freq, axis=1)
         return self.df
     
     def ts_utility(self):
-        df = self.df
+        """
+        Calculate the average utility score for each group in the group column
 
-        avg_utility= df.groupby(self.group_col)['UTILITY'].mean().reset_index()
-        avg_utility.columns = [self.group_col,'average_utility_score']
+        Returns:
+        pd.DataFrame: DataFrame containing the utility scores.
+        """
+        df = self.df
+        avg_utility= df.groupby(self.group_column)['UTILITY'].mean().reset_index()
+        avg_utility.columns = [self.group_column,'average_utility_score']
 
         return avg_utility
     
     def ts_eqvas(self):
+        """
+        Calculate the time series of EQ-VAS scores.
+
+        Returns:
+        pd.DataFrame: DataFrame containing the time series of EQ-VAS scores.
+        """
         df = self.df
-        #print('origin df',df)
-        avg_eqvas = df.groupby(self.group_col)['EQVAS'].mean().reset_index()
-
-        print('avg eqvas',avg_eqvas)
-
-
-        avg_eqvas.columns = [self.group_col,'average_EQVAS_score']
+        avg_eqvas = df.groupby(self.group_column)['EQVAS'].mean().reset_index()
+        avg_eqvas.columns = [self.group_column,'average_EQVAS_score']
 
         return avg_eqvas
     
     def health_state_density_curve(self):
+        """
+        Calculate the health state density curve.
+
+        Returns:
+        pd.DataFrame: DataFrame containing the health state density curve.
+        """
         df = self.df
         groups = self.group_list
         cumulative_data = []
 
         for group in groups:
             if len(groups)>1:
-                group_df = df[df[self.group_col]==group]
+                group_df = df[df[self.group_column]==group]
             else:
                 group_df = df
 
             profile_counts = group_df['INDEXPROFILE'].value_counts().reset_index()
             profile_counts.columns = ['INDEXPROFILE', 'frequency']
             profile_counts = profile_counts.sort_values(by='frequency', ascending=False).reset_index(drop=True)
-            
             profile_counts['cumulative_frequency'] = profile_counts['frequency'].cumsum() / profile_counts['frequency'].sum()
             profile_counts['cumulative_obs'] = (profile_counts.index + 1) / len(profile_counts)
             group_df = profile_counts
@@ -232,13 +281,23 @@ class Processor:
             cumulative_data.append(group_df[['cumulative_frequency', 'cumulative_obs', 'group']])
         
         cumulative_df = pd.concat(cumulative_data)
-
         return cumulative_df
 
     def utility_density(self):
+        """
+        Used to create nicer utility values for the visualisation function to plot the density curves.
+
+        Returns:
+        pd.DataFrame: DataFrame containing the utility density.
+        """
         df = self.df
         df['rounded_utility'] = df['UTILITY'].round(2)
         return df
+    
+    def cont_to_cat(self):
+        #change age to agegroup, not used.
+        df = self.df
+        return
 
 
     #todo 

@@ -3,12 +3,29 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class Visualizer:
+    """
+    A class used to visualize data using various plots.
+
+    Attributes:
+    data (pd.DataFrame): The data to be visualized.
+    """
 
     def __init__(self,data):
+        """
+        Initialize the Visualizer with data.
+
+        Parameters:
+        data (pd.DataFrame): The data to be visualized.
+        """
         self.data = data.copy()
 
     def time_series(self):
-        print('trying to create ts with raw data',self.data)
+        """
+        Create a time series plot of the data.
+
+        Returns:
+        matplotlib.figure.Figure: The figure object containing the time series plot.
+        """
         df = self.data
         df.set_index(df.columns[0], inplace=True)
         fig, ax = plt.subplots()
@@ -22,11 +39,15 @@ class Visualizer:
                 sns.lineplot(x=df.index, y=col, data=df, ax=ax, label=col)
             ax.set(xlabel=df.index.name, ylabel='Values', title="Time Series of Multiple Columns")
             ax.legend(title='Columns')
-
-        print('the df',df)
         return fig
     
     def hpg(self):
+        """
+        Create a Health Profile Grid (HPG) scatter plot.
+
+        Returns:
+        matplotlib.figure.Figure: The figure object containing the HPG scatter plot.
+        """
         df = self.data
         fig, ax = plt.subplots(figsize=(10, 10))
         sns.scatterplot(data=df, x='postop_ranking', y='preop_ranking', hue='Paretian class', 
@@ -110,7 +131,4 @@ class Visualizer:
         plt.tight_layout()
         return fig
     
-            
-            
-
             

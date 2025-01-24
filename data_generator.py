@@ -2,6 +2,16 @@ import random
 import pandas as pn
 
 class Generator:
+    """
+    Generate synthetic patient data.
+
+    Parameters:
+    num (int): Number of patients.
+    time_intervals (int): Number of time intervals.
+
+    Returns:
+    pd.DataFrame: DataFrame containing the generated patient data.
+    """
     def _init_(self):
         pass
 
@@ -57,7 +67,5 @@ class Generator:
         df.insert(9, 'INDEXPROFILE', df[["MO", "SC", "UA", "PD", "AD"]].apply(lambda row: ''.join(row.astype(str)), axis=1))
         df.to_csv('fake_data.csv', index=False)
 
-        print(df.head(30))
+        print(df.head(3))
         return df
-
-Generator.generate_data(100,3)
