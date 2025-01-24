@@ -7,7 +7,7 @@ import time
 
 from data_validation import Validator
 from data_analysis import Processor
-from data_vizualisation import Visualizer  # Import the Visualizer class
+from data_vizualisation import Visualizer
 from eq5d_profile import Eq5dvalue
 from data_generator import Generator
 from shiny import reactive
@@ -24,11 +24,11 @@ app_ui = ui.page_fluid(
                     ui.input_file("valueset_input", "Upload valueset (default valueset already loaded)"),
                     ui.input_file("raw_input", "Upload raw data to be analysed"),
                     ui.input_action_button("generate_fake_data", "Click to generate Fake Data with the following parameters:"),
-                    ui.output_ui('fas'),
+                    ui.output_ui('program_status_debug'),
                     ui.br(),
                     ui.br(),
                     ui.row(
-                        ui.column(6, ui.input_select("patient_number", "Number of patients:", choices=[10**i for i in range(1, 11)], selected=10)),
+                        ui.column(6, ui.input_select("patient_number", "Number of patients:", choices=[10**i for i in range(1, 5)], selected=10)),
                         ui.column(6, ui.input_select("time_intervals", "Number of time intervals:", choices=list(range(1, 11)), selected=1))
                     ),
                     ui.output_ui('filter_col_ui'),
@@ -53,7 +53,7 @@ app_ui = ui.page_fluid(
             ui.output_text("print_grouplist"),
             ui.output_table("show_df1"),
             ui.output_plot("desc_plot"),
-  # New table area for selected dataframe
+
         ),
         ui.nav_panel("Time-series analysis",
             ui.h2("Display table/plots of the change over time with n time intervals"),
@@ -67,13 +67,19 @@ app_ui = ui.page_fluid(
             ui.output_text('time_intervals_text'),
             ui.output_ui("df_ui2"),
             ui.output_table("selected_ts_df"),
-            ui.output_plot("time_series_plot"),  # Existing plot area
-            
-            
+            ui.output_plot("time_series_plot"), 
+        ),
+        ui.nav_panel('Ideal Data format',
+            ui.h2('Displays data from the last time data gen was run'),
+            ui.output_table('fake_data_display')
+        ),
+        ui.nav_panel('important',
+            ui.h2(' features '),
+            ui.p("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
         )
     )
 )
-# Define the server logic
+# Server logic
 default_valueset = pd.read_csv('valueset_data.csv')
 default_country = "NewZealand"
 
@@ -81,18 +87,17 @@ def server(input, output, session):
 
     value_set = reactive.Value(default_valueset)
     country_choice = reactive.Value(default_valueset.columns.tolist()[1:])
-    country_chosen = reactive.Value(False)
+    fake_data = pd.read_csv('fake_data.csv')
+
 
     raw_data = reactive.Value(pd.DataFrame())
-    validated_data = reactive.Value(None)  # Reactive value to store validated data
+    validated_data = reactive.Value(None) 
     data_with_util = reactive.Value(None)
     filtered_data = reactive.Value(None)
 
-    filter_applied = reactive.Value(False)
-   
 
     grouped_dfs = reactive.Value([])
-    data_tables = reactive.Value({})  # Reactive value to store data tables
+    data_tables = reactive.Value({})  
     group_data_tables = reactive.Value({})
     time_series_tables = reactive.value({})
 
@@ -102,30 +107,25 @@ def server(input, output, session):
     valid_time_groups = reactive.Value(['TIME_INTERVAL','TIMESTAMP','TIME']) 
     
 
-
     column_choices = reactive.Value(['None'])
     df_output_choices = reactive.Value(['No Dataframes Created'])
     ts_output_choices = reactive.Value(['No Time series Created'])
 
     filter_options = reactive.value([])
-    filter_values = reactive.Value([])
+
 
     patient_number = reactive.Value(int(10))
     time_intervals = reactive.Value(int(1))
 
     app_initialized = reactive.Value(True)
-    display_ftext = reactive.Value(False)
+
     new_text = reactive.Value("Filtered data - choose filter for data")
 
-    ready_to_display_df1=reactive.Value(False)
-    ready_to_apply_filter = reactive.Value(False)
 
     program_status = reactive.Value(None)
 
     util_added = reactive.Value(False)
-    ready_to_validate = reactive.Value(False)
-    validation_status = reactive.Value(False)  # Reactive value to track validation status
-    ready_to_process = reactive.Value(False)
+
 
     show_util = reactive.Value(0)
     run_filter = reactive.Value(0)
@@ -135,41 +135,49 @@ def server(input, output, session):
     activate_plot1 = reactive.Value(0)
     trigger_ts_process = reactive.Value(0)
 
-    
+    @reactive.Effect
+    @reactive.event(app_initialized)
+    def start_program():
+        program_status.set('INITIALIZED')
+        print('App initialized')
 
+        # INITIALIZED -> DATA_LOADED -> VALIDATED -> UTIL_ADDED -> CHECK_FILTER -> 
+        # FILTER_APPLIED or NOFILTER_APPLIED -> READY_TO_PROCESS -> READY_TO_DISPLAY -> plots/data displayed
     
     @output
     @render.text
     @reactive.event(program_status)
-    def fas():
+    def program_status_debug():
         print('program status updated',program_status.get())
-        return 'rogram status updated',program_status.get()
+        return 'Current program status:',program_status.get()
 
-    
-    @reactive.Effect
-    @reactive.event(app_initialized)
-    def set_program_status():
-        program_status.set('INITIAL')
-        print('app has been initialized')
-
-        # DATA_LOADED -> validated -> util added -> filterered/not -> ready to process
-        #each of the later functions first checks ready to process, does absolutely nothing if not
-        #whenever a change happens before ready to process, we need to change status back
-
+   
     @reactive.Effect
     @reactive.event(raw_data)
     def watch_raw_data():
-
         if not raw_data.get().empty:
-            print('a change in raw data')
+            print('Raw data has been loaded')
             program_status.set('DATA_LOADED')
+
+    @reactive.Effect
+    @reactive.event(value_set)
+    def watch_valueset():
+        if not value_set.get().equals(default_valueset):
+            if not raw_data.get().empty:
+                print('New valueset has been loaded')
+                program_status.set('VALIDATED')
+            else:
+                print('New valueset has been loaded, waiting for data')
+        else:
+            print('Default vaueset loaded')
 
     @reactive.Effect
     @reactive.event(input.country)
     def watch_country():
-        print('country has been changed to',input.country())
+        print('Country changed to:',input.country())
         if not raw_data.get().empty:
-            program_status.set('VALIDATED')
+            program_status.set('VALIDATED') 
+            #we dont need to re-validate the data when country is changed, but have to re-add utility
         return
 
     @reactive.Effect
@@ -184,7 +192,7 @@ def server(input, output, session):
                 raw_data.set(pd.read_csv(file_path))
             elif file_path.endswith('.xlsx'):
                 raw_data.set(pd.read_excel(file_path))
-    
+
     @reactive.Effect
     @reactive.event(input.valueset_input)
     def load_value_set():
@@ -260,7 +268,7 @@ def server(input, output, session):
     @render.table
     @reactive.event(program_status)
     def rawdata_display():
-        if program_status.get() !='INITIAL':
+        if program_status.get() !='INITIALIZED':
             df = raw_data.get()
             if df is not None:
                 old_index = df.index.name if df.index.name else 'index'
@@ -292,7 +300,7 @@ def server(input, output, session):
     @reactive.event(program_status)
     def trigger_util_display():
 
-        dont_show_util = ['INITIAL','DATA_LOADED','EXTRACTED','VALIDATED']
+        dont_show_util = ['INITIALIZED','DATA_LOADED','EXTRACTED','VALIDATED']
         if program_status.get() in dont_show_util:
             show_util.set(0)
         elif program_status.get()=='UTIL_ADDED':
@@ -361,7 +369,7 @@ def server(input, output, session):
 
             print('column is none!, do nothing')
             print('the current program status',program_status.get())
-            if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+            if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
                 program_status.set('NOFILTER_APPLIED')
             #new_text.set("Filtered data - choose filter for data")
 
@@ -421,7 +429,7 @@ def server(input, output, session):
             print('found something')
             run_filter.set(run_filter.get()+1)
         elif input.filter_values()==():
-            if program_status.get()=='FILTER_APPLIED' or program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+            if program_status.get()=='FILTER_APPLIED' or program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
                 print('found nothing')
                 if not raw_data.get().empty:
                     run_filter.set(run_filter.get()+1)
@@ -503,12 +511,12 @@ def server(input, output, session):
                 print('THELAST****************************************************************')
                 df = df.sort_values(by='UID')
                 print('a filtered table has been found successfully, now setting program to the next step')
-                program_status.set('RTP')
+                program_status.set('READY_TO_PROCESS')
                 return pd.DataFrame(df).head(5)
         
         if not raw_data.get().empty and show_util.get()>0:
             print(' i am now ready to process')
-            program_status.set('RTP')
+            program_status.set('READY_TO_PROCESS')
         return pd.DataFrame({"No data available": ["Filtered dataframe will display here when data is filtered"]})
     
     
@@ -517,12 +525,12 @@ def server(input, output, session):
     def advance_prog():
         if program_status.get()=='NOFILTER_APPLIED':
             time.sleep(0.2)
-            program_status.set('RTP')
+            program_status.set('READY_TO_PROCESS')
 
     @reactive.Effect
     @reactive.event(program_status)
     def checkpoint_1():
-        if program_status.get()=='RTP':
+        if program_status.get()=='READY_TO_PROCESS':
             print('ready to advance to next stage')
         
 
@@ -538,7 +546,7 @@ def server(input, output, session):
     def start_process():
         group_c = input.group_col()
         print(f"The group_col has been set to: {group_c}")
-        if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+        if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
             trigger_process.set(trigger_process.get()+1)
         
 
@@ -546,7 +554,7 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(trigger_process)
     def process_data():
-        if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+        if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
             print('Trying to process data')
             data = filtered_data.get()
             # Check if validation was successful
@@ -640,7 +648,7 @@ def server(input, output, session):
             df_output_choices.set(grouped_dfs.get())
 
         print("Dataframe options updated:", df_output_choices.get())
-        program_status.set('READY_TO_DF1')
+        program_status.set('READY_TO_DISPLAY')
 
     @output
     @render.text
@@ -659,14 +667,14 @@ def server(input, output, session):
     @reactive.event(input.dataframe_select,program_status,input.group_options)
     def trigger_df():
         print(f"The df select has been set to: {input.dataframe_select.get()}")
-        if program_status.get()=='READY_TO_DF1':
+        if program_status.get()=='READY_TO_DISPLAY':
             trigger_df1.set(trigger_df1.get()+1)
             
     @reactive.Effect
     @reactive.event(program_status,input.group_col,input.dataframe_select)
     def trigger_plot():
         print(f"The plot has been set to: {input.dataframe_select.get()}")
-        if program_status.get()=='READY_TO_DF1':
+        if program_status.get()=='READY_TO_DISPLAY':
             activate_plot1.set(activate_plot1.get()+1)
 
     @output
@@ -801,7 +809,7 @@ def server(input, output, session):
     @reactive.event(program_status,input.group_col_page3)
     def trigger_plot():
         print(f"The time column: {input.group_col_page3.get()}")
-        if program_status.get()=='RTP' or program_status.get()=='READY_TO_DF1':
+        if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
             trigger_ts_process.set(trigger_ts_process.get()+1)
 
 
@@ -809,7 +817,7 @@ def server(input, output, session):
     @reactive.event(trigger_ts_process)
     def process_ts_data():
         print('actiating ts processor')
-        if program_status.get()=='INITIAL':
+        if program_status.get()=='INITIALIZED':
             print('holup not yet')
             return
 
@@ -916,6 +924,12 @@ def server(input, output, session):
     @render.text
     def time_group_list():
         return f"Valid time groups: {', '.join(valid_time_groups.get())}"
+    
+
+    @output
+    @render.table
+    def fake_data_display():
+        return fake_data
 
 
 
