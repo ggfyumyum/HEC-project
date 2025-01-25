@@ -51,6 +51,7 @@ app_ui = ui.page_fluid(
             ui.output_ui("df_ui"),
             ui.output_ui("group_options_ui"),
             ui.output_text("print_grouplist"),
+            ui.input_checkbox("reverse_grouplist_checkbox", "Reverse Group List", value=False),
             ui.output_table("show_df1"),
             ui.output_plot("desc_plot"),
 
@@ -108,6 +109,7 @@ def server(input, output, session):
     time_series_tables = reactive.value({})
 
     groups = reactive.Value(['NO_GROUP_CHOSEN'])
+    reverse_grouplist = reactive.Value(False)
 
     #if user tries to group by something that is not in this list, or create timeseries from a different column, it will not work
     valid_time_groups = reactive.Value(['TIME_INTERVAL','TIMESTAMP','TIME']) 
@@ -116,6 +118,8 @@ def server(input, output, session):
     column_choices = reactive.Value(['None'])
     df_output_choices = reactive.Value(['No Dataframes Created'])
     ts_output_choices = reactive.Value(['No Time series Created'])
+
+    preserve_selection = reactive.Value(False)
 
     filter_options = reactive.value([])
 
@@ -400,7 +404,6 @@ def server(input, output, session):
     def debug_filter_values():
         print('input.filter_values has been updated:', input.filter_values())
         if input.filter_values()!=():
-            print('found something')
             run_filter.set(run_filter.get()+1)
         elif input.filter_values()==():
             if program_status.get()=='FILTER_APPLIED' or program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
@@ -490,14 +493,28 @@ def server(input, output, session):
     @reactive.event(column_choices)
     def group_col_ui():
         return ui.input_select("group_column", "Group data By:", choices=column_choices.get())
-    
+
+
     @reactive.Effect
     @reactive.event(input.group_column,program_status)
     def start_process():
+        
         group_column = input.group_column()
         print(f"The grouping column has been set to: {group_column}")
         if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
             trigger_process.set(trigger_process.get()+1)
+
+    @reactive.Effect
+    @reactive.event(reverse_grouplist)
+    def watch_reverse_group():
+        print('reverse group status is',reverse_grouplist.get(),'noticed a change')
+        
+        if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
+            preserve_selection.set(True)
+            trigger_process.set(trigger_process.get()+1)
+        else:
+            print('noticed change in reverse group, but nothing to do about it yet')
+
         
     @reactive.Effect
     @reactive.event(trigger_process)
@@ -507,7 +524,13 @@ def server(input, output, session):
 
             data = filtered_data.get()
             group_column = input.group_column()
-            groups.set(Processor(data,group_column).group_list)
+            process = Processor(data,group_column)
+            if reverse_grouplist.get():
+                process = Processor(data,group_column,reverse_grouplist=True)
+            else:
+                process= Processor(data,group_column,reverse_grouplist=False)
+            groups.set(process.group_list)
+            print('new groups,',groups.get())
             groups_list = groups.get()
 
             if data is not None and groups_list==['NO_GROUP_CHOSEN'] or len(groups_list)==1:
@@ -528,7 +551,7 @@ def server(input, output, session):
                 res = {}
                 grouped_dfs.set(['simple_desc','binary_desc','top_frequency'])
                 groups_wanted = grouped_dfs.get()
-                all_dfs = Processor(data,group_column).siloed_data
+                all_dfs = Processor(data,group_column,reverse_grouplist=reverse_grouplist.get()).siloed_data
 
                 res = {group_name: {groups_wanted[n]: df for n, df in enumerate([Processor(group_data).simple_desc(), Processor(group_data).binary_desc(), Processor(group_data).top_frequency()])} for group_name, group_data in all_dfs.items()}           
                 hsdc_df = Processor(data,group_column).health_state_density_curve()
@@ -543,10 +566,10 @@ def server(input, output, session):
                 #special case if the number of groups in column is exactly 2, can create the paretian dataframe
                 group_tables = group_data_tables.get()
                 try:
-                    px_df = Processor(data, group_column).paretian()
-                    group1 = groups_list[0]
-                    group2 = groups_list[1]
-                    hpg = Processor(data,group_column).hpg(px_df,group1,group2)
+                    px_df = Processor(data, group_column,reverse_grouplist=reverse_grouplist.get()).paretian()
+                    group_1 = groups_list[0]
+                    group_2 = groups_list[1]
+                    hpg = Processor(data,group_column,reverse_grouplist=reverse_grouplist.get()).hpg(px_df,group_1,group_2)
 
                 except Exception as e:
                     print(f"Error trying to create paretian dataframe: {e}")
@@ -555,9 +578,7 @@ def server(input, output, session):
                         group_tables[group_name]['paretian/health_profile_grid'] = hpg
                     group_data_tables.set(group_tables)
                     grouped_dfs.set(['simple_desc','binary_desc','top_frequency','health_state_density_curve','paretian/health_profile_grid'])
-
             print('Processing successful, dataframes are created and ready to display')
-            
         else:
             print('Group column was changed but not ready to process yet')
             return
@@ -571,6 +592,9 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(trigger_process)
     def update_dataframe_select():
+        if preserve_selection.get():
+            preserve_selection.set(False)
+            return
         if input.group_column()=='None' or len(groups.get())==1:
             available_dfs = data_tables.get()
             df_output_choices.set(list(available_dfs))
@@ -582,10 +606,18 @@ def server(input, output, session):
 
     @output
     @render.text
+    @reactive.event(groups)
     def print_grouplist():
         out = groups.get()
         return f"Group list for selected group: {out}"
     
+    @reactive.Effect
+    @reactive.event(input.reverse_grouplist_checkbox)
+    def update_reverse_grouplist():
+        reverse_grouplist.set(input.reverse_grouplist_checkbox())
+        print(f"Reverse Group List set to: {reverse_grouplist.get()}")
+
+
     @output
     @render.ui
     def group_options_ui():
@@ -599,7 +631,7 @@ def server(input, output, session):
             trigger_df1.set(trigger_df1.get()+1)
             
     @reactive.Effect
-    @reactive.event(program_status,input.group_column,input.dataframe_select)
+    @reactive.event(program_status,input.group_column,input.dataframe_select,groups)
     def trigger_plot():
         print(f"The plot has been set to: {input.dataframe_select.get()}")
         if program_status.get()=='READY_TO_DISPLAY':
@@ -624,7 +656,9 @@ def server(input, output, session):
             old_index = df.index.name if df.index.name else 'index'
             fixed_index = df.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(3)
+            if 'UID' in fixed_index.columns:
+                fixed_index = fixed_index.sort_values('UID')
+            return pd.DataFrame(fixed_index).head(100)
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
         

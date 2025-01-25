@@ -50,14 +50,15 @@ class Visualizer:
         """
         df = self.data
         fig, ax = plt.subplots(figsize=(10, 10))
-        sns.scatterplot(data=df, x='postop_ranking', y='preop_ranking', hue='Paretian class', 
+        #ranking scores are in column index 2 and 3 respectively
+        sns.scatterplot(data=df, x=df.columns[2], y=df.columns[3], hue='Paretian class', 
                         palette={'Better': 'green', 'Worse': 'red', 'Same': 'yellow', 'Mixed/uncategorised': 'blue'}, 
                         style='Paretian class', s=100, ax=ax)
         ax.plot([1, 3125], [1, 3125], color='black', linestyle='--', linewidth=1)
         ax.set_xlim(1, 3125)
         ax.set_ylim(1, 3125)
-        ax.set_xlabel('Postop scores')
-        ax.set_ylabel('Postop scores')
+        ax.set_xlabel(df.columns[0])
+        ax.set_ylabel(df.columns[1])
         ax.set_title('Health Profile Grid')
         ax.legend(title='Change in health status')
         ax.grid()

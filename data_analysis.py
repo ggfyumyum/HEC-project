@@ -17,7 +17,7 @@ class Processor:
     """
     
 
-    def __init__(self, data: pd.DataFrame,group_column: str='None'):
+    def __init__(self, data: pd.DataFrame,group_column: str='None',reverse_grouplist: bool=False):
         """
         Initialize the Processor with data and an optional group column.
 
@@ -40,6 +40,11 @@ class Processor:
         else:
             group_list = self.df[self.group_column].unique().tolist()
             self.group_list = [str(x) for x in group_list]
+
+        self.reversed_grouplist = list(reversed(self.group_list))
+
+        if reverse_grouplist:
+            self.group_list = self.reversed_grouplist
         #If there are multiple groups detected, split the data into dataframes with one group each
         if len(self.group_list)>1:
             self.siloed_data = {str(group): data for group, data in self.df.groupby(self.group_column)}
@@ -132,31 +137,40 @@ class Processor:
             df2 = self.siloed_data[group_2]
 
             #if the different groups do not have matching UIDs, we cant create the paretian DF.
-
+            print('df1',df1)
+            print('df2',df2)
         
             if set(df1['UID']) != set(df2['UID']):
                 raise ValueError('invalid grouping selection for comparison')
             
 
             df = pd.merge(df1,df2,on=['UID'])
-            df[group_1] = df['INDEXPROFILE_x']
-            df[group_2] = df['INDEXPROFILE_y']
-            df = df[['UID',group_1,group_2]]
+
+            df[f'{group_1}_INDEX'] = df['INDEXPROFILE_x']
+            df[f'{group_2}_INDEX']= df['INDEXPROFILE_y']
+
+            df = df[['UID',f'{group_1}_INDEX',f'{group_2}_INDEX']]
             df.set_index(['UID'],inplace=True)
 
             def check_paretian(row,group_1,group_2):
                 #ideally would add the ability for user to discern which group is baseline, and which is followup.
-                baseline = list(str(row[group_1]))
-                followup = list(str(row[group_2]))
+
+                baseline = list(str(row[f'{group_1}_INDEX']))
+                followup = list(str(row[f'{group_2}_INDEX']))
+
                 delta = [int(g2) - int(g1) for g1, g2 in zip(baseline, followup)]
+ 
                 if all (d==0 for d in delta):
                     return "Same"
                 elif all (d>0 for d in delta):
+
                     return "Worse"
                 elif all (d<0 for d in delta):
+
                     return "Better"
                 return "Mixed/uncategorised"
             df['Paretian class'] = df.apply(check_paretian,group_1=group_1,group_2=group_2,axis=1)
+            
             return df
         except ValueError as e:
             print(f"Error:{e}")
@@ -173,7 +187,7 @@ class Processor:
         top_10_index = x.value_counts().head(10)
         return top_10_index
     
-    def hpg(self, paretian_df: pd.DataFrame ,group1:str = 'Preop',group2:str ='Postop'):
+    def hpg(self, paretian_df: pd.DataFrame ,group_1:str = 'Preop',group_2:str ='Postop'):
         """
         Create a Health Profile Grid (HPG) based on Paretian classification and utility ranking.
 
@@ -187,13 +201,13 @@ class Processor:
         """
         df = self.df
 
-        df_1 = df[df[self.group_column]==group1]
-        df_2 = df[df[self.group_column]==group2]
-        
-        paretian_df['preop_ranking'] = paretian_df.index.map(df_1.set_index('UID')['TOTAL_RANKED_UTILITY'])
-        paretian_df['postop_ranking'] = paretian_df.index.map(df_2.set_index('UID')['TOTAL_RANKED_UTILITY'])
+        df_1 = df[df[self.group_column]==group_1]
+        df_2 = df[df[self.group_column]==group_2]
 
-        hpg_df = paretian_df
+        paretian_df[f'{group_1}_RANK_SCORE'] = paretian_df.index.map(df_1.set_index('UID')['TOTAL_RANKED_UTILITY'])
+        paretian_df[f'{group_2}_RANK_SCORE'] = paretian_df.index.map(df_2.set_index('UID')['TOTAL_RANKED_UTILITY'])
+
+        hpg_df = paretian_df[[f'{group_1}_INDEX',f'{group_2}_INDEX',f'{group_1}_RANK_SCORE',f'{group_2}_RANK_SCORE','Paretian class']]
         return hpg_df
     
     def level_sum_score(self):
@@ -218,7 +232,6 @@ class Processor:
         def calculate_freq(row):
             count = [0]*5
             for dim in dimensions:
-                #print('row',row)
                 value = int(row[dim])
                 if 0<value<6:
                     count[value-1]+=1
