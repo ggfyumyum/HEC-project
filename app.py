@@ -20,7 +20,6 @@ app_ui = ui.page_fluid(
             ui.row(
                 ui.column(4,  # Left third of the page
                     ui.h2("Shiny app for EQ-5D data analysis"),
-                    ui.output_ui('program_status_debug'),
                     ui.br(),
                     ui.output_ui("country_select_ui"),
                     ui.input_file("valueset_input", "Upload valueset (default valueset already loaded)"),
@@ -38,10 +37,12 @@ app_ui = ui.page_fluid(
                 ui.column(7,  # Right two-thirds of the page
                     ui.h2("Raw data"),
                     ui.output_table('rawdata_display'),
+                    ui.br(),
                     ui.h2("Data with utility scores"),
                     ui.output_table("util_data_display"),
+                    ui.br(),
                     ui.h2(ui.output_text("filtered_data_heading")),
-                    ui.output_table("filtered_data_display")
+                    ui.output_table("filtered_data_display"),
                 )
             )
         ),
@@ -60,7 +61,6 @@ app_ui = ui.page_fluid(
         ui.nav_panel("Time-series analysis",
             ui.h2("Display table/plots of the change over time with n time intervals"),
             ui.br(),
-            ui.p("If you want to create a time series, specify which column keeps track of the timestamp. If the option isn't available, you can add it manually."),
             ui.br(),
             ui.output_text("time_group_list"),
             ui.output_ui("group_col_ui_page3"),
@@ -68,7 +68,6 @@ app_ui = ui.page_fluid(
             ui.input_text("new_time_group", "Add new time group column:", ""),
             ui.input_action_button("add_time_group", "Add Time Group"),
             
-
             ui.output_text('time_intervals_text'),
             ui.output_ui("df_ui2"),
             ui.output_table("selected_ts_df"),
@@ -85,58 +84,54 @@ app_ui = ui.page_fluid(
             ui.p("t10 index and LFS dont display plots - this is intended since there is nothing to plot")
 
         )
+    ),
+    ui.div(
+        ui.input_dark_mode(),
+        style="position: fixed; top: 10px; right: 10px; background-color: white; padding: 2px 5px; font-size: 12px; z-index: 1000;"
+    ),
+    ui.div(
+        ui.output_text("display_info"),
+        style="position: fixed; top: 50px; right: 10px; background-color: white; padding: 10px; border: 1px solid black; z-index: 1000;"
     )
 )
-# Server logic
+# default values
 default_valueset = pd.read_csv('valueset_data.csv')
 default_country = "NewZealand"
+time_groups = ['TIME_INTERVAL','TIMESTAMP','TIME']
+
 
 def server(input, output, session):
+    # load default values
 
     value_set = reactive.Value(default_valueset)
     country_choice = reactive.Value(default_valueset.columns.tolist()[1:])
     fake_data = pd.read_csv('fake_data.csv')
+    patient_number = reactive.Value(int(10))
+    time_intervals = reactive.Value(int(1))
+    valid_time_groups = reactive.Value(time_groups) 
 
+    # track the program status
+
+    program_status = reactive.Value(None)
+    app_initialized = reactive.Value(True)
+
+    # track the data status
 
     raw_data = reactive.Value(pd.DataFrame())
     validated_data = reactive.Value(None) 
+    util_added = reactive.Value(False)
     data_with_util = reactive.Value(None)
+    filter_options = reactive.value([])
     filtered_data = reactive.Value(None)
-
+    
+    # store the processed data
 
     grouped_dfs = reactive.Value([])
     data_tables = reactive.Value({})  
     group_data_tables = reactive.Value({})
     time_series_tables = reactive.value({})
 
-    groups = reactive.Value(['NO_GROUP_CHOSEN'])
-    reverse_grouplist = reactive.Value(False)
-
-    #if user tries to group by something that is not in this list, or create timeseries from a different column, it will not work
-    valid_time_groups = reactive.Value(['TIME_INTERVAL','TIMESTAMP','TIME']) 
-    
-
-    column_choices = reactive.Value(['None'])
-    df_output_choices = reactive.Value(['No Dataframes Created'])
-    ts_output_choices = reactive.Value(['No Time series Created'])
-
-    preserve_selection = reactive.Value(False)
-
-    filter_options = reactive.value([])
-
-
-    patient_number = reactive.Value(int(10))
-    time_intervals = reactive.Value(int(1))
-
-    app_initialized = reactive.Value(True)
-
-    new_text = reactive.Value("Filtered data - choose filter for data")
-
-
-    program_status = reactive.Value(None)
-
-    util_added = reactive.Value(False)
-
+    # trigger other processes
 
     show_util = reactive.Value(0)
     run_filter = reactive.Value(0)
@@ -145,6 +140,18 @@ def server(input, output, session):
     trigger_df1 = reactive.Value(0)
     activate_plot1 = reactive.Value(0)
     trigger_ts_process = reactive.Value(0)
+
+    #set the selection menus
+
+    groups = reactive.Value(['NO_GROUP_CHOSEN'])
+    preserve_selection = reactive.Value(False)
+    reverse_grouplist = reactive.Value(False)
+
+    column_choices = reactive.Value(['None'])
+    df_output_choices = reactive.Value(['No Dataframes Created'])
+    ts_output_choices = reactive.Value(['No Time series Created'])
+    
+    new_text = reactive.Value("Filtered data - choose filter for data")
 
     @reactive.Effect
     @reactive.event(app_initialized)
@@ -159,7 +166,8 @@ def server(input, output, session):
     @render.text
     @reactive.event(program_status)
     def program_status_debug():
-        return 'Current program status:',program_status.get()
+        print('Current program status:',program_status.get())
+        return
 
     @reactive.Effect
     @reactive.event(raw_data)
@@ -193,8 +201,6 @@ def server(input, output, session):
             program_status.set('VALIDATED') 
             #Dont need to re-validate the data when country is changed, but have to re-add utility
         return
-    
-
 
     @reactive.Effect
     @reactive.event(input.raw_input)
@@ -244,7 +250,7 @@ def server(input, output, session):
             if data is not None:
                 res = Validator(data)
                 validated_data.set(res.data)
-                program_status.set('VALIDATED')# Set validation status to True
+                program_status.set('VALIDATED')
                 print('Data validated')
 
     @reactive.Effect
@@ -499,7 +505,6 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.group_column,program_status)
     def start_process():
-        
         group_column = input.group_column()
         print(f"The grouping column has been set to: {group_column}")
         if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
@@ -508,14 +513,10 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(reverse_grouplist)
     def watch_reverse_group():
-        print('reverse group status is',reverse_grouplist.get(),'noticed a change')
-        
+        print('Reverse group toggled')
         if program_status.get()=='READY_TO_PROCESS' or program_status.get()=='READY_TO_DISPLAY':
             preserve_selection.set(True)
             trigger_process.set(trigger_process.get()+1)
-        else:
-            print('noticed change in reverse group, but nothing to do about it yet')
-
         
     @reactive.Effect
     @reactive.event(trigger_process)
@@ -529,12 +530,11 @@ def server(input, output, session):
             if reverse_grouplist.get():
                 process = Processor(data,group_column,reverse_grouplist=True)
             else:
-                process= Processor(data,group_column,reverse_grouplist=False)
+                process = Processor(data,group_column,reverse_grouplist=False)
             groups.set(process.group_list)
-            print('new groups,',groups.get())
             groups_list = groups.get()
 
-            if data is not None and groups_list==['NO_GROUP_CHOSEN'] or len(groups_list)==1:
+            if data is not None and (groups_list==['NO_GROUP_CHOSEN'] or len(groups_list)==1):
 
                 processed = Processor(data,group_column='None')
                 groups.set(processed.group_list)
@@ -862,7 +862,12 @@ def server(input, output, session):
     @render.table
     def fake_data_display():
         return fake_data
-
+    
+    @output
+    @render.text
+    def display_info():
+        return f"Selected Country: {input.country()}, Program status: {program_status.get()}"
+    
 # Create the app
 app = App(app_ui, server)
 

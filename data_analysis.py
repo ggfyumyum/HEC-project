@@ -339,38 +339,3 @@ class Processor:
         df = self.df
         return
 
-
-    #todo 
-
-    #cumulative frequency - DONE
-    #paretian classification - DONE
-    #health profile grid - DONE
-    #level sum score - DONE
-    #level frequency score - DONE
-    #Time series utility - DONE
-    #EQ VAS time series - DONE
-    #simple descriptive statistics - DONE
-    #data validation - DONE
-
-    #error handling - DONE
-    #missing imputation - DONE
-    #group by demographic - DONE
-
-    #country select validation
-    #flexible country selection
-    #statsitical analysis of density plot
-    #bias data generator
-
-    #extra
-    #shannons indices
-    #health state density curve - DONE
-    #EQVAS - regression analysis
-
-
-    #heteroskedacitiy
-    #regression analysis
-
-
-
-
-
