@@ -45,11 +45,11 @@ class Generator:
         for patient in UID:
             gender, age = patient_info[patient]
             for t in range(time_intervals):
-                mo = random.randint(1, 5)
-                sc = random.randint(1, 5)
-                ua = random.randint(1, 5)
-                pd = random.randint(1, 5)
-                ad = random.randint(1, 5)
+                mo = random.randint(1,5)
+                sc = random.randint(1,5)
+                ua = random.randint(1,5)
+                pd = random.randint(1,5)
+                ad = random.randint(1,5)
                 eqvas = random.randint(0, 100)  # Generate a new EQVAS for each time interval
                 d1[patient].append([intervals[t], age, gender, mo, sc, ua, pd, ad, eqvas])
 

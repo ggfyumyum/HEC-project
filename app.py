@@ -77,12 +77,8 @@ app_ui = ui.page_fluid(
             ui.h2('Displays data from the last time data gen was run'),
             ui.output_table('fake_data_display')
         ),
-        ui.nav_panel('important',
-            ui.h2(' features '),
-            ui.p("If you try to load a valueset with invalid formatting, it will crash the program"),
-            ui.p("Loading invalid rawdata will also crash"),
-            ui.p("t10 index and LFS dont display plots - this is intended since there is nothing to plot")
-
+        ui.nav_panel('info-',
+            ui.h2(' features ')
         )
     ),
     ui.div(
@@ -284,7 +280,7 @@ def server(input, output, session):
                 old_index = df.index.name if df.index.name else 'index'
                 fixed_index = df.reset_index()
                 fixed_index.rename(columns={'index': old_index}, inplace=True)
-                return pd.DataFrame(fixed_index).head(3)
+                return pd.DataFrame(fixed_index).head(10)
         return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
 
     @reactive.Effect
@@ -324,7 +320,7 @@ def server(input, output, session):
                     df = df.sort_values(by='UID')
                 print('Utility set and displaying successfully, checking filter')
                 program_status.set('CHECK_FILTER')
-                return pd.DataFrame(df).head(5)
+                return pd.DataFrame(df).head(10)
         else:
             print('Not ready to display utility')
         return pd.DataFrame({"No validated data": ["Validated dataframe will display here when data is validated"]})
@@ -475,7 +471,7 @@ def server(input, output, session):
                 if 'UID' in df.columns:
                     df = df.sort_values(by='UID')
                 program_status.set('READY_TO_PROCESS')
-                return pd.DataFrame(df).head(5)
+                return pd.DataFrame(df).head(10)
         
         if not raw_data.get().empty and show_util.get()>0:
             program_status.set('READY_TO_PROCESS')
@@ -659,7 +655,7 @@ def server(input, output, session):
             fixed_index.rename(columns={'index': old_index}, inplace=True)
             if 'UID' in fixed_index.columns:
                 fixed_index = fixed_index.sort_values('UID')
-            return pd.DataFrame(fixed_index).head(100)
+            return pd.DataFrame(fixed_index).head(10)
         else:
             return pd.DataFrame({"No data uploaded": ["Dataframe will display here when raw data is uploaded"]})
         
@@ -806,7 +802,7 @@ def server(input, output, session):
             old_index = ts_copy.index.name if ts_copy.index.name else 'index'
             fixed_index = ts_copy.reset_index()
             fixed_index.rename(columns={'index': old_index}, inplace=True)
-            return pd.DataFrame(fixed_index).head(3)
+            return pd.DataFrame(fixed_index).head(5)
         
         return pd.DataFrame({"Message": ["No data available"]})
     

@@ -80,9 +80,12 @@ class Processor:
         """
         #Create a table which groups problem (1) vs none (2-5), for a single group (e.g. pre-op)
         df = self.sum_df
+        print('sum df', df)
 
-        binary_profile = pd.DataFrame({'No problems':df.iloc[0,:], 'Problems':df.iloc[1:,:].sum()})
-        binary_profile.index = df.index
+        binary_profile = pd.DataFrame({
+        'No problems': df.iloc[:, 0],
+        'Problems': df.iloc[:, 1:].sum(axis=1)})
+
         binary_profile['% problems'] = (binary_profile['Problems'] / (binary_profile['No problems']+ binary_profile['Problems'])).mul(100).round(1)
             
         return binary_profile
