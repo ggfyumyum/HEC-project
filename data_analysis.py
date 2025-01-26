@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as stats
 
 class Processor:
 
@@ -249,8 +250,21 @@ class Processor:
         pd.DataFrame: DataFrame containing the utility scores.
         """
         df = self.df
-        avg_utility= df.groupby(self.group_column)['UTILITY'].mean().reset_index()
-        avg_utility.columns = [self.group_column,'average_utility_score']
+        utility_mean= df.groupby(self.group_column)['UTILITY'].mean()
+        utility_counts = df.groupby(self.group_column)['UTILITY'].count()
+        utility_sem = df.groupby(self.group_column)['UTILITY'].sem()
+
+        confidence_level = 0.95
+        degrees_freedom = utility_counts - 1
+        crit_value = stats.t.ppf((1 + confidence_level) /2, degrees_freedom)
+        margin_error = utility_sem * crit_value
+
+        avg_utility = pd.DataFrame({
+            self.group_column: utility_mean.index,
+            'average_UTILITY_score':utility_mean.values,
+            'ci_lower': utility_mean.values - margin_error.values,
+            'ci_upper': utility_mean.values + margin_error.values
+        })
 
         return avg_utility
     
@@ -262,8 +276,21 @@ class Processor:
         pd.DataFrame: DataFrame containing the time series of EQ-VAS scores.
         """
         df = self.df
-        avg_eqvas = df.groupby(self.group_column)['EQVAS'].mean().reset_index()
-        avg_eqvas.columns = [self.group_column,'average_EQVAS_score']
+        eqvas_mean = df.groupby(self.group_column)['EQVAS'].mean()
+        eqvas_counts = df.groupby(self.group_column)['EQVAS'].count()
+        eqvas_sem = df.groupby(self.group_column)['EQVAS'].sem()
+
+        confidence_level = 0.95
+        degrees_freedom = eqvas_counts - 1
+        crit_value = stats.t.ppf((1 + confidence_level) /2, degrees_freedom)
+        margin_error = eqvas_sem * crit_value
+
+        avg_eqvas = pd.DataFrame({
+            self.group_column: eqvas_mean.index,
+            'average_EQVAS_score':eqvas_mean.values,
+            'ci_lower': eqvas_mean.values - margin_error.values,
+            'ci_upper': eqvas_mean.values + margin_error.values
+        })
 
         return avg_eqvas
     

@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as stats
 
 class Visualizer:
     """
@@ -26,9 +27,11 @@ class Visualizer:
         Returns:
         matplotlib.figure.Figure: The figure object containing the time series plot.
         """
+        fig, ax = plt.subplots()
         df = self.data
         df.set_index(df.columns[0], inplace=True)
-        fig, ax = plt.subplots()
+
+        has_ci = 'ci_lower' in df.columns and 'ci_upper' in df.columns
 
         if df.shape[1] == 1:
             sns.lineplot(x=df.index, y=df.columns[0], data=df, ax=ax)
@@ -36,10 +39,13 @@ class Visualizer:
 
         else:
             for col in df.columns:
-                sns.lineplot(x=df.index, y=col, data=df, ax=ax, label=col)
+                if col not in ['ci_lower', 'ci_upper']:
+                    sns.lineplot(x=df.index, y=col, data=df, ax=ax, label=col)
+                    if has_ci:
+                        ax.fill_between(df.index, df['ci_lower'], df['ci_upper'], alpha=0.3)
+
             ax.set(xlabel=df.index.name, ylabel='Values', title="Time Series of Multiple Columns")
             ax.legend(title='Columns')
-        return fig
     
     def hpg(self):
         """

@@ -20,11 +20,12 @@ app_ui = ui.page_fluid(
             ui.row(
                 ui.column(4,  # Left third of the page
                     ui.h2("Shiny app for EQ-5D data analysis"),
+                    ui.output_ui('program_status_debug'),
+                    ui.br(),
                     ui.output_ui("country_select_ui"),
                     ui.input_file("valueset_input", "Upload valueset (default valueset already loaded)"),
                     ui.input_file("raw_input", "Upload raw data to be analysed"),
                     ui.input_action_button("generate_fake_data", "Click to generate Fake Data with the following parameters:"),
-                    ui.output_ui('program_status_debug'),
                     ui.br(),
                     ui.br(),
                     ui.row(
